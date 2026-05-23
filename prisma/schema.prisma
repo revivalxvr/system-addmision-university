@@ -1,0 +1,217 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model UserSiakad {
+  id         String     @id @default(uuid())
+  name       String  
+  email      String     @unique
+  password   String  
+  role       String  
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt  
+}
+
+model TfGroup {
+  id         String     @id @default(uuid())
+  group      String  
+  amount     Int        
+  student    Student[]    
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt  
+}
+
+model TuitionFee {
+  id         String     @id @default(uuid())
+  student    Student    @relation( fields: [studentId], references: [id])      
+  studentId  String 
+  status     String 
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt 
+}
+
+model Faculty {
+  id         String     @id @default(uuid())
+  name       String  
+  code       String      
+  major      Major[]    
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt  
+}
+
+model Major {
+  id         String     @id @default(uuid())
+  name       String  
+  code       String      
+  faculty    Faculty    @relation( fields: [facultyId], references: [id])
+  facultyId  String   
+  class      Class[]   
+  lecture    Lecture[]   
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt  
+}
+
+model AcademyYear {
+  id         String     @id @default(uuid())
+  name       String  
+  dateStart DateTime      
+  dateEnd DateTime      
+  status     Boolean      
+  class      Class[]       
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt  
+}
+
+model Class {
+  id         String      @id @default(uuid())
+  name       String  
+  majorId    String      
+  yearId     String      
+  major      Major       @relation( fields: [majorId], references: [id])   
+  year       AcademyYear @relation( fields: [yearId], references: [id]) 
+  student    Student[]      
+  schedule   Schedule[]      
+  createdAt  DateTime    @default(now())  
+  updatedAt  DateTime    @updatedAt 
+}
+
+model Student {
+  id         String     @id @default(uuid())
+  name String  
+  email String    
+  password String? 
+  role String @default("student")  
+  studentNumber String @unique 
+  semester Int    
+  classOf Int    
+  tfGroupId String   
+  tfGroup TfGroup @relation( fields: [tfGroupId], references: [id])    
+  classId String  
+  class Class @relation( fields: [classId], references: [id])
+  payment Payment[]  
+  tuitionFee TuitionFee[]     
+  studyPlan StudyPlan[]     
+  createdAt DateTime @default(now())  
+  updatedAt DateTime @updatedAt  
+}
+
+model Lecture {
+  id         String     @id @default(uuid())
+  name       String  
+  email      String     
+  password   String?  
+  role String @default("lecture")
+  lectureNumber Int
+  position String
+  majorId String
+  major Major @relation( fields: [majorId], references: [id])
+  course Course[]
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt
+}
+
+model Course {
+  id         String     @id @default(uuid())
+  name       String  
+  code       String 
+  lectureId  String 
+  credits    Int
+  lecture    Lecture @relation( fields: [lectureId], references: [id])
+  schedule   Schedule[] 
+  StudyPlans StudyPlanCourse[]
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt 
+}
+
+model Schedule {
+  id         String     @id @default(uuid())
+  timeStart  DateTime
+  timeEnd    DateTime
+  day        String
+  classId    String
+  class      Class @relation( fields: [classId], references: [id])
+  courseId   String
+  course     Course @relation( fields: [courseId], references: [id])
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt
+}
+
+model Payment {
+  id         String     @id @default(uuid())
+  student    Student    @relation( fields: [studentId], references: [id])
+  studentId  String
+  code       String
+  status     String
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt
+}
+
+model StudyPlan {
+  id         String     @id @default(uuid())
+  studentId  String
+  student    Student    @relation( fields: [studentId], references: [id])
+  courses    StudyPlanCourse[]
+  status     String?
+  gpa        Int?
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt
+}
+
+model StudyPlanCourse {
+  id          String     @id @default(uuid())
+  score       Int?
+  studyPlanId String
+  courseId    String
+  studyPlan   StudyPlan @relation( fields: [studyPlanId], references: [id])
+  course      Course @relation( fields: [courseId], references: [id])
+
+  attendance1   String?
+  attendance2   String?
+  attendance3   String?
+  attendance4   String?
+  attendance5   String?
+  attendance6   String?
+  attendance7   String?
+  attendance8   String?
+  attendance9   String?
+  attendance10   String?
+  attendance11   String?
+  attendance12   String?
+  attendance13   String?
+  attendance14   String?
+  attendance15   String?
+  attendance16   String?
+
+
+  task1  Int?
+  task2  Int?
+  task3  Int?
+  task4  Int?
+  task5  Int?
+
+
+  uts  Int?
+  uas  Int?
+
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt
+}
+
+model TimeLine {
+  id         String     @id @default(uuid())
+  name       String
+  date       DateTime
+  createdAt  DateTime   @default(now())  
+  updatedAt  DateTime   @updatedAt
+}
