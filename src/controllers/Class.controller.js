@@ -60,7 +60,7 @@ export const getClassesRoom = async (req, res) => {
   }
 };
 
-export const createClassesRoom = async (res, req) => {
+export const createClassesRoom = async (req, res) => {
   try {
     const tokenCredential = req.user;
     if (tokenCredential.role !== "admin") {
@@ -87,7 +87,7 @@ export const createClassesRoom = async (res, req) => {
   }
 };
 
-export const updateClassesRoom = async (res, req) => {
+export const updateClassesRoom = async (req, res) => {
   try {
     const tokenCredential = req.user;
     if (tokenCredential.role !== "admin") {
@@ -126,7 +126,7 @@ export const updateClassesRoom = async (res, req) => {
   }
 };
 
-export const deleteClassesRoom = async (res, req) => {
+export const deleteClassesRoom = async (req, res) => {
   try {
     const tokenCredential = req.user;
     if (tokenCredential.role !== "admin") {
