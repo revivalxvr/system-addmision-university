@@ -124,3 +124,33 @@ export const updateClassesRoom = async (res, req) => {
         return errorResponse (res, "gagal update class room",{error: error.message}, 500)
     }
 }
+
+export const deleteClassesRoom = async (res, req) => {
+    try {
+          const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                 success: false,
+                 message: "Unauthorized" });
+        }
+
+        const {id} = req.params;
+        const existing = await prisma.class.findUnique({
+            where: {
+                id
+            }
+        });
+        if(!existing) {
+            return errorResponse (res, "class room tidak ditemukan", null, 404)
+        }
+        const classRoom = await prisma.class.delete({
+            where: {
+                id
+            }
+        });
+        return successResponse (res, "berhasil delete class room", classRoom)
+    } catch (error) {
+        console.error(error);
+        return errorResponse (res, "gagal update class room",{error: error.message}, 500)
+    }
+}
