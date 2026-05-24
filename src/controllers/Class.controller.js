@@ -29,3 +29,32 @@ export const getClasses = async (res, req) => {
         return errorResponse (res, "gagal mendapatkan data class",{error: error.message}, 500)
     }
 }
+
+export const getClassesRoom = async (res, req) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                 success: false,
+                 message: "Unauthorized" });
+        }
+        const {id} = req.params
+        const classRoom = await prisma.class.findUnique({
+            where: {
+                id
+            },
+            include: {
+                major: true,
+                year: true
+            }
+        });
+        if(!classRoom) {
+            return errorResponse (res, "class room tidak ditemukan", null, 404)
+        }
+        return successResponse (res, "berhasil mendapatkan data class room", classRoom)
+
+    } catch (error) {
+         console.error(error);
+        return errorResponse (res, "gagal mendapatkan data class room",{error: error.message}, 500)
+    }
+}
