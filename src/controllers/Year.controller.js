@@ -38,12 +38,40 @@ export const getYearById = async (req, res) => {
                 id
             }
         })
-        if(!year || year.length ===0) {
+        if(!year || year.length === 0) {
             return errorResponse(res, "tahun akademik tidak ditemukan", null, 404);
         }
         return successResponse(res, "berhasil mendapatkan data tahun akademik", year);
         
     } catch (error) {
          return errorResponse(res, "gagal mendapatkan data tahun akademik", null, 500);
+    }
+}
+
+export const createYear = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                 success: false,
+                 message: "Unauthorized" });
+        }
+
+        const {name, dateStart, dateEnd, status} = req.body;
+
+        if(!name || !dateStart || !dateEnd || !status == undefined) {
+            return errorResponse(res, "data tahun akademik harus diisi", null, 401);
+        }
+        const year = await prisma.academyYear.create({
+            data :{
+                name,
+                dateStart: new Date(dateStart),
+                dateEnd : new Date(dateEnd),
+                status
+            }
+        })
+    } catch (error) {
+        return errorResponse(res, "gagal membuat tahun akademik", null, 500);
+    
     }
 }
