@@ -1,118 +1,166 @@
 import req from "express/lib/request.js";
 import prisma from "../config/Prisma.js";
 import { successResponse, errorResponse } from "../utils/response.js";
-   
-   
-   // getAllYears,
-    // getYearById,
-    // createYear,
-    // updateYear,
-    // deleteYear,
+
+// getAllYears,
+// getYearById,
+// createYear,
+// updateYear,
+// deleteYear,
 
 export const getAllYears = async (req, res) => {
-    try {
-        const tokenCredential = req.user;
-        if (tokenCredential.role !== "admin") {
-            return res.status(401).json({
-                 success: false,
-                 message: "Unauthorized" });
-        }
-        const years = await prisma.academyYear.findMany();
-        return successResponse(res, "berhasil mendapatkan data tahun akademik", years);
-    } catch (error) {
-        return errorResponse(res, "gagal mendapatkan data tahun akademik", null, 500);
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
-}
+    const years = await prisma.academyYear.findMany();
+    return successResponse(
+      res,
+      "berhasil mendapatkan data tahun akademik",
+      years,
+    );
+  } catch (error) {
+    return errorResponse(
+      res,
+      "gagal mendapatkan data tahun akademik",
+      null,
+      500,
+    );
+  }
+};
 
 export const getYearById = async (req, res) => {
-    try {
-        const tokenCredential = req.user;
-        if (tokenCredential.role !== "admin") {
-            return res.status(401).json({
-                 success: false,
-                 message: "Unauthorized" });
-        }
-        const {id} = req.params;
-        const year = await prisma.academyYear.findUnique({
-            where :{
-                id
-            }
-        })
-        if(!year || year.length === 0) {
-            return errorResponse(res, "tahun akademik tidak ditemukan", null, 404);
-        }
-        return successResponse(res, "berhasil mendapatkan data tahun akademik", year);
-        
-    } catch (error) {
-         return errorResponse(res, "gagal mendapatkan data tahun akademik", null, 500);
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
-}
+    const { id } = req.params;
+    const year = await prisma.academyYear.findUnique({
+      where: {
+        id,
+      },
+    });
+    if (!year || year.length === 0) {
+      return errorResponse(res, "tahun akademik tidak ditemukan", null, 404);
+    }
+    return successResponse(
+      res,
+      "berhasil mendapatkan data tahun akademik",
+      year,
+    );
+  } catch (error) {
+    return errorResponse(
+      res,
+      "gagal mendapatkan data tahun akademik",
+      null,
+      500,
+    );
+  }
+};
 
 export const createYear = async (req, res) => {
-    try {
-        const tokenCredential = req.user;
-        if (tokenCredential.role !== "admin") {
-            return res.status(401).json({
-                 success: false,
-                 message: "Unauthorized" });
-        }
-
-        const {name, dateStart, dateEnd, status} = req.body;
-
-        if(!name || !dateStart || !dateEnd || !status == undefined) {
-            return errorResponse(res, "data tahun akademik harus diisi", null, 401);
-        }
-        const year = await prisma.academyYear.create({
-            data :{
-                name,
-                dateStart: new Date(dateStart),
-                dateEnd : new Date(dateEnd),
-                status
-            }
-        })
-    } catch (error) {
-        return errorResponse(res, "gagal membuat tahun akademik", null, 500);
-    
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
-}
+
+    const { name, dateStart, dateEnd, status } = req.body;
+
+    if (!name || !dateStart || !dateEnd || !status == undefined) {
+      return errorResponse(res, "data tahun akademik harus diisi", null, 401);
+    }
+    const year = await prisma.academyYear.create({
+      data: {
+        name,
+        dateStart: new Date(dateStart),
+        dateEnd: new Date(dateEnd),
+        status,
+      },
+    });
+  } catch (error) {
+    return errorResponse(res, "gagal membuat tahun akademik", null, 500);
+  }
+};
 
 export const updateYear = async (req, res) => {
-    try {
-        const tokenCredential = req.user;
-        if (tokenCredential.role !== "admin") {
-            return res.status(401).json({
-                 success: false,
-                 message: "Unauthorized" });
-        }
-
-        const {id} = req.params;
-        const {name, dateStart, dateEnd, status} = req.body;
-
-        if(!name || !dateStart || !dateEnd || !status == undefined) {
-            return errorResponse(res, "data tahun akademik harus diisi", null, 401);
-        }
-
-        const existing = await prisma.academyYear.findUnique({
-            where :{
-                id
-            }
-        })
-        if(!existing) {
-            return errorResponse(res, "tahun akademik tidak ditemukan", null, 404);
-        }
-        const year = await prisma.academyYear.update({
-            where :{
-                id
-            },
-            data :{
-                name,
-                dateStart: dateStart ? new Date(dateStart): existing.dateStart,
-                dateEnd : dateEnd ? new Date(dateEnd) : existing.dateEnd,
-                status
-            }
-        })
-        return successResponse(res, "berhasil update tahun akademik", year);
-    } catch (error) {
-        return errorResponse(res, "gagal update tahun akademik", null, 500);
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
     }
-}
+
+    const { id } = req.params;
+    const { name, dateStart, dateEnd, status } = req.body;
+
+    if (!name || !dateStart || !dateEnd || !status == undefined) {
+      return errorResponse(res, "data tahun akademik harus diisi", null, 401);
+    }
+
+    const existing = await prisma.academyYear.findUnique({
+      where: {
+        id,
+      },
+    });
+    if (!existing) {
+      return errorResponse(res, "tahun akademik tidak ditemukan", null, 404);
+    }
+    const year = await prisma.academyYear.update({
+      where: {
+        id,
+      },
+      data: {
+        name,
+        dateStart: dateStart ? new Date(dateStart) : existing.dateStart,
+        dateEnd: dateEnd ? new Date(dateEnd) : existing.dateEnd,
+        status,
+      },
+    });
+    return successResponse(res, "berhasil update tahun akademik", year);
+  } catch (error) {
+    return errorResponse(res, "gagal update tahun akademik", null, 500);
+  }
+};
+
+export const deleteYear = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { id } = req.params;
+    const existing = await prisma.academyYear.findUnique({
+      where: {
+        id,
+      },
+    });
+    if (!existing) {
+      return errorResponse(res, "tahun akademik tidak ditemukan", null, 404);
+    }
+    const year = await prisma.academyYear.delete({
+      where: {
+        id
+      }
+    });
+    return successResponse(res, "berhasil delete tahun akademik", year);
+  } catch (error) {
+    return errorResponse(res, "gagal delete tahun akademik", null, 500);
+  }
+};
