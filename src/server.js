@@ -6,6 +6,7 @@ import Authsiakad from "./routes/Authsiakad.js";
 import Faculty from "./routes/Faculty.js";
 import Major from "./routes/Major.js";
 import Year from "./routes/Year.js";
+import Class from "./routes/Class.js";
 
 
 
@@ -27,6 +28,7 @@ app.use("/api/authsiakad", Authsiakad);
 app.use("/api/faculties/", Faculty);
 app.use("/api/majors/", Major);
 app.use("/api/years/", Year);
+app.use("/api/class/", Class)
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
