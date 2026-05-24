@@ -23,7 +23,8 @@ export const getClasses = async (req, res) => {
     });
     return successResponse(res, "berhasil mendapatkan data class", classes);
   } catch (error) {
-    return errorResponse(res, "gagal mendapatkan data jurusan", null, 500);
+    console.log("=== ERROR ASLI ===", error);
+    return errorResponse(res, "gagal mendapatkan data class", null, 500);
   }
 };
 

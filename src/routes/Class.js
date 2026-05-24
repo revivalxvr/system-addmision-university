@@ -9,9 +9,7 @@ import {
 } from "../controllers/Class.controller.js";
 
 const router = express.Router();
-router.use = (verifyToken);
-
-// getClasses, getClassesRoom, createClassesRoom, updateClassesRoom, deleteClassesRoom
+router.use(verifyToken);
 
 router.get("/", getClasses);
 router.get("/:id", getClassesRoom);
