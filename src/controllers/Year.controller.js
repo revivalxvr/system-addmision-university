@@ -89,6 +89,11 @@ export const createYear = async (req, res) => {
         status,
       },
     });
+    return successResponse(
+      res,
+      "berhasil membuat data tahun akademik",
+      year,
+    );
   } catch (error) {
     return errorResponse(res, "gagal membuat tahun akademik", null, 500);
   }
