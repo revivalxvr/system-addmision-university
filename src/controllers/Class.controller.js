@@ -86,3 +86,41 @@ export const createClassesRoom = async (res, req) => {
     }
 }
 
+export const updateClassesRoom = async (res, req) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                 success: false,
+                 message: "Unauthorized" });
+        }
+
+        const {id} = req.params;
+        const existing = await prisma.class.findUnique({
+            where: {
+                id
+            }
+        });
+        if(!existing) {
+            return errorResponse (res, "class room tidak ditemukan", null, 404)
+        }
+        const {name, majorId, yearId} = req.body;
+        if (!name || !majorId || !yearId) {
+            return errorResponse (res, "data class room harus diisi", null, 401)
+        }
+        const classRoom = await prisma.class.update({
+            where: {
+                id
+            },
+            data: {
+                name,
+                majorId,
+                yearId
+            }
+        });
+        return successResponse (res, "berhasil update class room", classRoom)
+    } catch (error) {
+        console.error(error);
+        return errorResponse (res, "gagal update class room",{error: error.message}, 500)
+    }
+}
