@@ -58,3 +58,31 @@ export const getClassesRoom = async (res, req) => {
         return errorResponse (res, "gagal mendapatkan data class room",{error: error.message}, 500)
     }
 }
+
+export const createClassesRoom = async (res, req) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                 success: false,
+                 message: "Unauthorized" });
+        }
+
+        const {name, majorId, yearId} = req.body;
+        if (!name || !majorId || !yearId) {
+            return errorResponse (res, "data class room harus diisi", null, 401)
+        }
+        const classRoom = await prisma.class.create({
+            data : {
+                name,
+                majorId,
+                yearId
+            }
+        });
+        return successResponse (res, "berhasil membuat class room", classRoom)
+    } catch (error) {
+        console.error(error);
+        return errorResponse (res, "gagal membuat class room",{error: error.message}, 500)
+    }
+}
+
