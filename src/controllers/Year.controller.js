@@ -75,3 +75,44 @@ export const createYear = async (req, res) => {
     
     }
 }
+
+export const updateYear = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                 success: false,
+                 message: "Unauthorized" });
+        }
+
+        const {id} = req.params;
+        const {name, dateStart, dateEnd, status} = req.body;
+
+        if(!name || !dateStart || !dateEnd || !status == undefined) {
+            return errorResponse(res, "data tahun akademik harus diisi", null, 401);
+        }
+
+        const existing = await prisma.academyYear.findUnique({
+            where :{
+                id
+            }
+        })
+        if(!existing) {
+            return errorResponse(res, "tahun akademik tidak ditemukan", null, 404);
+        }
+        const year = await prisma.academyYear.update({
+            where :{
+                id
+            },
+            data :{
+                name,
+                dateStart: dateStart ? new Date(dateStart): existing.dateStart,
+                dateEnd : dateEnd ? new Date(dateEnd) : existing.dateEnd,
+                status
+            }
+        })
+        return successResponse(res, "berhasil update tahun akademik", year);
+    } catch (error) {
+        return errorResponse(res, "gagal update tahun akademik", null, 500);
+    }
+}
