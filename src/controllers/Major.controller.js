@@ -106,6 +106,10 @@ export const createMajor = async (req, res) => {
     }
 
     const { name, code, facultyId } = req.body;
+    
+    if(!name || !code || !facultyId) {
+      return errorResponse(res, "data jurusan harus diisi", null, 401);
+    }
     const major = await prisma.major.create({
       data: {
         name,
@@ -131,6 +135,10 @@ export const updateMajor = async (req, res) => {
     }
     const { id } = req.params;
     const { name, code, facultyId } = req.body;
+
+    if(!name || !code || !facultyId) {
+      return errorResponse(res, "data jurusan harus diisi", null, 401);
+    }
 
     //cek if existed in database by id
     const major = await prisma.major.findUnique({
