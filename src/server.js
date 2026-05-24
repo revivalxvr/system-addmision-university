@@ -28,7 +28,7 @@ app.use("/api/authsiakad", Authsiakad);
 app.use("/api/faculties/", Faculty);
 app.use("/api/majors/", Major);
 app.use("/api/years/", Year);
-app.use("/api/class/", Class)
+app.use("/api/classes/", Class)
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
