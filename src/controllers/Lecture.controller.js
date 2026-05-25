@@ -92,11 +92,52 @@ export const createLecture = async (req, res) => {
         majorId,
       },
     });
-    if (!lecture) {
-      return errorResponse(res, "gagal membuat data", null, 500);
-    }
     return successResponse(res, "berhasil membuat data", lecture);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", null, 500);
   }
 };
+
+export const updateLecture = async (req, res) => {
+  try {
+    //validate the role must be admin to access this route
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { id } = req.params;
+    const { name, email, lectureNumber, position, majorId } = req.body;
+    if (!name || !email || !lectureNumber || !position || !majorId) {
+      return errorResponse(res, "data harus diisi", null, 400);
+    }
+    const existLecture = await prisma.lecture.findUnique({
+      where: {
+        id,
+      },
+    })
+    if (!existLecture) {
+      return errorResponse(res, "data tidak ditemukan", null, 404);
+    }
+   
+    const lecture = await prisma.lecture.update({
+      where: {
+        id,
+      },
+      data: {
+        name,
+        email,
+        lectureNumber: Number(lectureNumber),
+        position,
+        majorId,
+      },
+    });
+    return successResponse(res, "berhasil memperbarui data", lecture);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", null, 500);
+  }
+};
+
+
