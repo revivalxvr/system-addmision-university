@@ -97,6 +97,47 @@ export const createCourse = async (req, res) => {
         return errorResponse(res, "terjadi kesalahan", error.message, 500);
     }
 }
+
+//updateCourse
+export const updateCourse = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+        const { id } = req.params;
+        const existCourse = await prisma.course.findUnique({
+            where: {
+                id,
+            }
+        })
+        if (!existCourse) {
+            return errorResponse(res, "data tidak ditemukan", null, 404);
+        }
+        const { name, code, lectureId, credits } = req.body;
+        if (!name || !code || !lectureId || !credits) {
+            return errorResponse(res, "data harus diisi", null, 400);
+        }
+        const course = await prisma.course.update({
+            where: {
+                id,
+            },
+            data: {
+                name,
+                code,
+                lectureId,
+                credits : Number(credits)
+            },
+        });
+        
+        return successResponse(res, "berhasil mengubah data", course);
+    } catch (error) {
+        return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
 //     deleteCourse
 
 export const  deleteCourse = async (req, res) => {
