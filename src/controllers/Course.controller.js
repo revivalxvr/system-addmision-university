@@ -14,12 +14,14 @@ export const getAllCourses = async (req, res) => {
                 message: "Unauthorized",
             });
         }
-        const courses = await prisma.course.findMany({
+       const courses = await prisma.course.findMany({
             include : {
                 lecture : {
-                    major : {
-                        include : {
-                            faculty : true
+                    include : {
+                        major : {
+                            include : {
+                                faculty : true
+                             }
                         }
                     }
                 }
@@ -27,6 +29,7 @@ export const getAllCourses = async (req, res) => {
         });
         return successResponse(res, "berhasil mendapatkan data", courses);
     } catch (error) {
+        console.log("=== ERROR ASLI ===", error);
         return errorResponse(res, "terjadi kesalahan", error.message, 500);
     }
 }
@@ -56,9 +59,11 @@ export const getCourseById = async (req, res) => {
             },
             include : {
                 lecture : {
-                    major : {
-                        include : {
-                            faculty : true
+                    include : {
+                        major : {
+                            include : {
+                                faculty : true
+                             }
                         }
                     }
                 }
