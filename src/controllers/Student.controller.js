@@ -159,12 +159,21 @@ export const updateStudent = async (req, res) => {
       });
     }
     const { id } = req.params;
-    const { name, email, semester, classOf, tfGroupId, classId } = req.body;
+    const {
+      name,
+      email,
+      semester,
+      classOf,
+      tfGroupId,
+      classId,
+      studentNumber,
+    } = req.body;
 
     if (!name || !email || !semester || !classOf || !tfGroupId || !classId) {
       return errorResponse(res, "data mahasiswa harus diisi", null, 401);
     }
 
+    // Cek apakah data mahasiswa dengan ID tersebut ada
     const existing = await prisma.student.findUnique({
       where: {
         id,
@@ -174,18 +183,26 @@ export const updateStudent = async (req, res) => {
       return errorResponse(res, "data tidak ditemukan", null, 404);
     }
 
+    // Buat objek data yang akan di-update secara dinamis
+    const dataUpdate = {
+      name,
+      email,
+      semester: Number(semester),
+      classOf: Number(classOf),
+      tfGroupId,
+      classId,
+    };
+
+    // KONDISIONAL: Jika Postman mengirimkan studentNumber, masukkan ke objek update
+    // Jika tidak dikirim (undefined/kosong), database akan tetap pakai nilai lama
+    if (studentNumber) {
+      dataUpdate.studentNumber = studentNumber;
+    }
+
+    // Jalankan perintah update dengan objek yang sudah di atur
     const student = await prisma.student.update({
-      where: {
-        id,
-      },
-      data: {
-        name,
-        email,
-        semester: Number(semester),
-        classOf: Number(classOf),    
-        tfGroupId,
-        classId,
-      },
+      where: { id },
+      data: dataUpdate, // Menggunakan objek dinamis di sini
     });
     return successResponse(res, "berhasil memperbarui data mahasiswa", student);
   } catch (error) {
