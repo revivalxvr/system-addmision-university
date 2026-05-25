@@ -112,6 +112,7 @@ export const updateTfGroup = async (req, res) => {
     });
     return successResponse(res, "berhasil update data", tfGroup);
   } catch (error) {
+      console.log("== data error sebenanrya ==",error);
     return errorResponse(res, "gagal update data", null, 500);
   }
 };
