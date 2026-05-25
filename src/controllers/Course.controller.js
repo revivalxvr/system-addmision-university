@@ -70,5 +70,55 @@ export const getCourseById = async (req, res) => {
     }
 }
 //     createCourse,
-//     updateCourse,
-//     deleteCourse,
+export const createCourse = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+        const { name, code, lectureId, credits } = req.body;
+        if (!name || !code || !lectureId || !credits) {
+            return errorResponse(res, "data harus diisi", null, 400);
+        }
+
+        const course = await prisma.course.create({
+            data: {
+                name,
+                code,
+                lectureId,
+                credits : Number(credits)
+            },
+        });
+        return successResponse(res, "berhasil membuat data", course, 201);
+    } catch (error) {
+        return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
+//     deleteCourse
+
+export const  deleteCourse = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+        const { id } = req.params;
+        const course = await prisma.course.delete({
+            where: {
+                id,
+            },
+        });
+        if (!course) {
+            return errorResponse(res, "data tidak ditemukan", null, 404);
+        }
+        return successResponse(res, "berhasil menghapus data", course);
+    } catch (error) {
+        return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
