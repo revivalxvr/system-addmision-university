@@ -10,6 +10,7 @@ import Class from "./routes/Class.js";
 import TfGroup from "./routes/TfGroup.js"
 import Student from "./routes/Student.js"
 import Lecture from "./routes/Lecture.js"
+import Course from "./routes/Course.js"
 
 
 
@@ -35,6 +36,7 @@ app.use("/api/class/", Class)
 app.use("/api/tf-groups/",  TfGroup)
 app.use("/api/students/", Student)
 app.use("/api/lecture/", Lecture)
+app.use("/api/courses/", Course)
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
