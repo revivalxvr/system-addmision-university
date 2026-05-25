@@ -63,7 +63,7 @@ export const getLectureById = async (req, res) => {
         }
     }
     });
-    return successResponse(res, "berhasil mendapatkan data", lecture);
+    return successResponse(res, "berhasil mendapatkan data dosen", lecture);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", null, 500);
   }
@@ -92,8 +92,9 @@ export const createLecture = async (req, res) => {
         majorId,
       },
     });
-    return successResponse(res, "berhasil membuat data", lecture);
+    return successResponse(res, "berhasil membuat data dosen", lecture);
   } catch (error) {
+    console.log("=== ERROR ASLI ===", error);
     return errorResponse(res, "terjadi kesalahan", null, 500);
   }
 };
