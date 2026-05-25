@@ -174,15 +174,6 @@ export const updateStudent = async (req, res) => {
       return errorResponse(res, "data tidak ditemukan", null, 404);
     }
 
-    
-    await prisma.studentNumber.update({
-      where: {
-        studentNumber: existing.studentNumber,
-      },
-      data: {
-        studentNumber: null,
-      },
-    })
     const student = await prisma.student.update({
       where: {
         id,
