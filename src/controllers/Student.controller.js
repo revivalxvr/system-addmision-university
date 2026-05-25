@@ -214,3 +214,37 @@ export const updateStudent = async (req, res) => {
     );
   }
 };
+
+export const deleteStudent = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { id } = req.params;
+    const existing = await prisma.student.findUnique({
+      where: {
+        id,
+      },
+    });
+    if (!existing) {
+      return errorResponse(res, "data tidak ditemukan", null, 404);
+    }
+    const student = await prisma.student.delete({
+      where: {
+        id,
+      },
+    })
+    return successResponse(res, "berhasil menghapus data mahasiswa", student);
+  } catch (error) {
+    return errorResponse(
+      res,
+      "gagal menghapus data mahasiswa",
+      error.message,
+      500,
+    );
+  }
+};
