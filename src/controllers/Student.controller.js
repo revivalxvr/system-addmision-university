@@ -112,10 +112,9 @@ export const createStudent = async (req, res) => {
       const now = new Date();
       const year = String(now.getFullYear()).slice(-2);
       const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.geDate()).padStart(2, "0");
       const random = Math.floor(100 + Math.random() * 900); // generate random number between 100 and 999 (3 digits)
 
-      studentNumber = `${year}${month}${day}${random}`; //2605105
+      studentNumber = `${year}${month}${random}`; //2605105
 
       const existing = await prisma.student.findUnique({
         where: {
@@ -195,8 +194,8 @@ export const updateStudent = async (req, res) => {
 
     // KONDISIONAL: Jika Postman mengirimkan studentNumber, masukkan ke objek update
     // Jika tidak dikirim (undefined/kosong), database akan tetap pakai nilai lama
-    if (studentNumber) {
-      dataUpdate.studentNumber = studentNumber;
+    if (studentNumber && studentNumber.trim() !== "") {
+      dataUpdate.studentNumber = studentNumber.trim(); // .trim() juga memastikan spasi tak sengaja ikut tersimpan
     }
 
     // Jalankan perintah update dengan objek yang sudah di atur
@@ -237,7 +236,7 @@ export const deleteStudent = async (req, res) => {
       where: {
         id,
       },
-    })
+    });
     return successResponse(res, "berhasil menghapus data mahasiswa", student);
   } catch (error) {
     return errorResponse(
