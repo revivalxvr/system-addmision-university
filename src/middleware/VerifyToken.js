@@ -20,7 +20,7 @@ export const verifyToken = (req, res, next) => {
         // 4. Simpan data user hasil decode ke properti req.user
         req.user = decoded;
         
-        // 5. Lolos, lanjut ke controller utama (misal: getFaculties)
+        // 5. Lolos, lanjut ke controller utama
         next();
     } catch (error) {
         // Jika token palsu atau sudah kedaluwarsa
