@@ -17,7 +17,15 @@ export const getAllLectures = async (req, res) => {
         message: "Unauthorized",
       });
     }
-    const lectures = await prisma.lecture.findMany();
+    const lectures = await prisma.lecture.findMany({
+        include : {
+            major : {
+                include : {
+                    faculty : true
+                }
+            }
+        }
+    });
     return successResponse(res, "berhasil mendapatkan data", lectures);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", null, 500);
