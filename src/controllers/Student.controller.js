@@ -148,3 +148,61 @@ export const createStudent = async (req, res) => {
     );
   }
 };
+
+export const updateStudent = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { id } = req.params;
+    const { name, email, semester, classOf, tfGroupId, classId } = req.body;
+
+    if (!name || !email || !semester || !classOf || !tfGroupId || !classId) {
+      return errorResponse(res, "data mahasiswa harus diisi", null, 401);
+    }
+
+    const existing = await prisma.student.findUnique({
+      where: {
+        id,
+      },
+    });
+    if (!existing) {
+      return errorResponse(res, "data tidak ditemukan", null, 404);
+    }
+
+    
+    await prisma.studentNumber.update({
+      where: {
+        studentNumber: existing.studentNumber,
+      },
+      data: {
+        studentNumber: null,
+      },
+    })
+    const student = await prisma.student.update({
+      where: {
+        id,
+      },
+      data: {
+        name,
+        email,
+        semester: Number(semester),
+        classOf: Number(classOf),    
+        tfGroupId,
+        classId,
+      },
+    });
+    return successResponse(res, "berhasil memperbarui data mahasiswa", student);
+  } catch (error) {
+    return errorResponse(
+      res,
+      "gagal memperbarui data mahasiswa",
+      error.message,
+      500,
+    );
+  }
+};
