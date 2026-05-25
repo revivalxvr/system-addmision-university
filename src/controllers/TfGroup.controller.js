@@ -51,3 +51,29 @@ export const getAllTfGroups = async (req, res) => {
       return errorResponse(res, "gagal mendapatkan data", null, 500);
     }
   };
+
+  export const createTfGroup = async (req, res) => {
+    try {
+      const tokenCredential = req.user;
+      if (tokenCredential.role !== "admin") {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const { group, amount } = req.body;
+      if (!group || !amount) {
+        return errorResponse(res, "data harus diisi", null, 401);
+      }
+      const tfGroup = await prisma.tfGroup.create({
+        data:{
+            group,
+            amount
+        }
+      });
+      return successResponse(res, "berhasil membuat data", tfGroup);
+    } catch (error) {
+      return errorResponse(res, "gagal membuat data", null, 500);
+    }
+  };
