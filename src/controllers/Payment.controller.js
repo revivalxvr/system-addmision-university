@@ -89,17 +89,17 @@ export const createPayment = async (req, res) => {
         message: "Unauthorized",
       });
     }
-    const {studentId, code, status} = req.body;
-    if(!studentId || !code || !status) {
+    const { studentId, code, status } = req.body;
+    if (!studentId || !code || !status) {
       return errorResponse(res, "data harus diisi", null, 401);
     }
     const payment = await prisma.payment.create({
       data: {
         studentId,
         code,
-        status
-      }
-    })
+        status,
+      },
+    });
     return successResponse(res, "berhasil mendapatkan data", payment);
   } catch (error) {
     return errorResponse(res, "gagal mendapatkan data", error.message, 500);
@@ -117,11 +117,11 @@ export const updatePayment = async (req, res) => {
     }
     const { id } = req.params;
     const existing = await prisma.payment.findUnique({
-        where: {
-          id,
-        },
-    })
-    if(!existing) {
+      where: {
+        id,
+      },
+    });
+    if (!existing) {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
     const { studentId, code, status } = req.body;
@@ -135,12 +135,32 @@ export const updatePayment = async (req, res) => {
       data: {
         studentId,
         code,
-        status
-      }
-    })
+        status,
+      },
+    });
     return successResponse(res, "berhasil mendapatkan data", payment);
   } catch (error) {
     return errorResponse(res, "gagal mendapatkan data", error.message, 500);
   }
 };
 //     deletePayment,
+export const deletePayment = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { id } = req.params;
+    const payment = await prisma.payment.delete({
+      where: {
+        id,
+      },
+    });
+    return successResponse(res, "berhasil mendapatkan data", payment);
+  } catch (error) {
+    return errorResponse(res, "gagal mendapatkan data", error.message, 500);
+  }
+};
