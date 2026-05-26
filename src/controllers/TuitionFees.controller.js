@@ -1,4 +1,4 @@
-import prisma from "../config/Prisma";
+import prisma from "../config/Prisma.js";
 import { successResponse, errorResponse } from "../utils/response.js";
 
 //    getAllTuitionFees,
