@@ -167,7 +167,7 @@ export const deletePayment = async (req, res) => {
         id,
       },
     });
-    return successResponse(res, "berhasil mendapatkan data", payment);
+    return successResponse(res, "berhasil menghapus data", payment);
   } catch (error) {
     return errorResponse(res, "Gagal terjadi kesalahan", error.message, 500);
   }
