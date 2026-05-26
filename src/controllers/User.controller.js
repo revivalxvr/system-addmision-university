@@ -23,6 +23,32 @@ export const getAllUsers = async (req, res) => {
   }
 };
 //     getUserById,
+export const getUserById = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+        const { id } = req.params;
+        const user = await prisma.user.findUnique({
+            where: {
+                id,
+            },
+            include: {
+                role: true
+            },
+        });
+        if (!user) {
+            return errorResponse(res, "data tidak ditemukan di data base", null, 404);
+        }
+        return successResponse(res, "berhasil mendapatkan data", user);
+    } catch (error) {
+        return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
 //     createUser,
 //     updateUser,
 //     deleteUser,
