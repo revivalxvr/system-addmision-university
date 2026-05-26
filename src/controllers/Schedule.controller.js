@@ -69,7 +69,7 @@ export const getScheduleById = async (req, res) => {
       },
     });
     if (!schedule) {
-      return errorResponse(res, "data tidak ditemukan", null, 404);
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
     return successResponse(res, "berhasil mendapatkan data", schedule);
   } catch (error) {
@@ -87,23 +87,17 @@ export const createSchedule = async (req, res) => {
       });
     }
     const { timeStart, timeEnd, day, classId, courseId } = req.body;
-    if (
-      !timeStart ||
-      !timeEnd ||
-      !day ||
-      !classId ||
-      !courseId
-    ) {
+    if (!timeStart || !timeEnd || !day || !classId || !courseId) {
       return errorResponse(res, "data harus diisi", null, 400);
     }
     const schedule = await prisma.schedule.create({
-      data : {
+      data: {
         timeStart,
         timeEnd,
         day,
         classId,
-        courseId
-      }
+        courseId,
+      },
     });
     return successResponse(res, "berhasil membuat data", schedule);
   } catch (error) {
@@ -125,21 +119,15 @@ export const updateSchedule = async (req, res) => {
       where: {
         id,
       },
-    })
+    });
     if (!existing) {
       return errorResponse(res, "data tidak ditemukan", null, 404);
     }
     const { timeStart, timeEnd, day, classId, courseId } = req.body;
-    if (
-      !timeStart ||
-      !timeEnd ||
-      !day ||
-      !classId ||
-      !courseId
-    ) {
+    if (!timeStart || !timeEnd || !day || !classId || !courseId) {
       return errorResponse(res, "data harus diisi", null, 400);
     }
-    const schedule = await prisma.schedule.update({ 
+    const schedule = await prisma.schedule.update({
       where: {
         id,
       },
@@ -148,18 +136,18 @@ export const updateSchedule = async (req, res) => {
         timeEnd,
         day,
         classId,
-        courseId
-      }
+        courseId,
+      },
     });
     return successResponse(res, "berhasil memperbarui data", schedule);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
-}
+};
 //     deleteSchedule,
 export const deleteSchedule = async (req, res) => {
-    try {
-        const tokenCredential = req.user;
+  try {
+    const tokenCredential = req.user;
     if (tokenCredential.role !== "admin") {
       return res.status(401).json({
         success: false,
@@ -167,16 +155,27 @@ export const deleteSchedule = async (req, res) => {
       });
     }
     const { id } = req.params;
+    const existing = await prisma.schedule.findUnique({
+      where: {
+        id,
+      },
+    });
+    if (!existing) {
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
+    }
+    await prisma.classSchedule.deleteMany({
+      where: {
+        scheduleId: id,
+      },
+    })
     const schedule = await prisma.schedule.delete({
       where: {
         id,
       },
     });
-    if (!schedule) {
-      return errorResponse(res, "data tidak ditemukan", null, 404);
-    }
+   
     return successResponse(res, "berhasil menghapus data", schedule);
-    } catch (error) {
-        return errorResponse(res, "terjadi kesalahan", error.message, 500);
-    }
-}
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
