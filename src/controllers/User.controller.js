@@ -74,5 +74,45 @@ export const getUserByRole = async (req, res) => {
     }
 }
 //     createUser,
+export const createUser = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+        const { name, email, password, roleId } = req.body;
+        if (!name || !email || !password || !roleId) {
+            return errorResponse(res, "data harus diisi", null, 400);
+        }
+        const existEmail = await prisma.user.findUnique({
+            where : {
+                email
+            }
+        })
+        if (existEmail) {
+            return errorResponse(res, "email sudah terdaftar", null, 400);
+        }
+        const hashed = await bcrypt.hash(password, 10);
+        const user = await prisma.user.create({
+            data: {
+                name,
+                email,
+                password: hashed,
+                roleId,
+            },
+        });
+        return successResponse(res, "berhasil membuat data user", {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+        });
+    } catch (error) {
+        return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
 //     updateUser,
 //     deleteUser,
