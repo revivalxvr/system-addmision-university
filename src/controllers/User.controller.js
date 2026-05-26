@@ -59,6 +59,16 @@ export const getUserByRole = async (req, res) => {
                 message: "Unauthorized",
             });
         }
+        const { roleId } = req.params;
+        const users = await prisma.user.findMany({
+            where: {
+                roleId,
+            },
+            include: {
+                role: true
+            },
+        });
+        return successResponse(res, "berhasil mendapatkan data by role", users, 200);
     } catch (error) {
          return errorResponse(res, "terjadi kesalahan", error.message, 500);
     }
