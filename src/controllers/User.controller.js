@@ -12,7 +12,7 @@ export const getAllUsers = async (req, res) => {
         message: "Unauthorized",
       });
     }
-    const users = await prisma.user.findMany({
+    const users = await prisma.userSiakad.findMany({
         orderBy: {
             createdAt: "desc"
         }
@@ -33,7 +33,7 @@ export const getUserById = async (req, res) => {
             });
         }
         const { id } = req.params;
-        const user = await prisma.user.findUnique({
+        const user = await prisma.userSiakad.findUnique({
             where: {
                 id,
             },
@@ -60,7 +60,7 @@ export const getUserByRole = async (req, res) => {
             });
         }
         const { roleId } = req.params;
-        const users = await prisma.user.findMany({
+        const users = await prisma.userSiakad.findMany({
             where: {
                 roleId,
             },
@@ -87,7 +87,7 @@ export const createUser = async (req, res) => {
         if (!name || !email || !password || !roleId) {
             return errorResponse(res, "data harus diisi", null, 400);
         }
-        const existEmail = await prisma.user.findUnique({
+        const existEmail = await prisma.userSiakad.findUnique({
             where : {
                 email
             }
@@ -154,3 +154,31 @@ export const updateUser = async (req, res) => {
     }
 }
 //     deleteUser,
+export const deleteUser = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+        const {id} = req.params
+        const existId = await prisma.userSiakad.findUnique({
+            where : {
+                id,
+            }
+        })
+        if(!existId) {
+            return errorResponse(res, "data tidak ditemukan di database", null, 404);
+        }
+        const user = await prisma.user.delete({
+            where: {
+                id,
+            },
+        });
+        return successResponse(res, "berhasil menghapus data user", user);
+    } catch (error) {
+         return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
