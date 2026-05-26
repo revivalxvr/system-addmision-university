@@ -77,5 +77,38 @@ export const getScheduleById = async (req, res) => {
   }
 };
 //     createSchedule,
+export const createSchedule = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { timeStart, timeEnd, day, classId, courseId } = req.body;
+    if (
+      !timeStart ||
+      !timeEnd ||
+      !day ||
+      !classId ||
+      !courseId
+    ) {
+      return errorResponse(res, "data harus diisi", null, 400);
+    }
+    const schedule = await prisma.schedule.create({
+      data : {
+        timeStart,
+        timeEnd,
+        day,
+        classId,
+        courseId
+      }
+    });
+    return successResponse(res, "berhasil membuat data", schedule);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 //     updateSchedule,
 //     deleteSchedule,
