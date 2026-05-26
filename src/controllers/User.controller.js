@@ -59,7 +59,7 @@ export const getUserByRole = async (req, res) => {
         const { roleId } = req.params;
         const users = await prisma.userSiakad.findMany({
             where: {
-                roleId,
+                role
             }
         });
         return successResponse(res, "berhasil mendapatkan data by role", users, 200);
