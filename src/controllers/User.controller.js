@@ -56,7 +56,7 @@ export const getUserByRole = async (req, res) => {
                 message: "Unauthorized",
             });
         }
-        const { roleId } = req.params;
+        const { role } = req.params;
         const users = await prisma.userSiakad.findMany({
             where: {
                 role
@@ -166,7 +166,7 @@ export const deleteUser = async (req, res) => {
         if(!existId) {
             return errorResponse(res, "data tidak ditemukan di database", null, 404);
         }
-        const user = await prisma.user.delete({
+        const user = await prisma.userSiakad.delete({
             where: {
                 id,
             },

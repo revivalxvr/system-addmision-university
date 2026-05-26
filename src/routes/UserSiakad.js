@@ -13,8 +13,10 @@ const router = express.Router();
 router.use(verifyToken);
 
 router.get("/", getAllUsers);
+router.get("/role/:role", getUserByRole);
+
 router.get("/:id", getUserById);
-router.get("/role/:roleId", getUserByRole);
+
 router.post("/", createUser);
 router.put("/:id", updateUser);
 router.delete("/:id", deleteUser);
