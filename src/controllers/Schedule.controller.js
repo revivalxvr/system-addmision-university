@@ -157,3 +157,26 @@ export const updateSchedule = async (req, res) => {
   }
 }
 //     deleteSchedule,
+export const deleteSchedule = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { id } = req.params;
+    const schedule = await prisma.schedule.delete({
+      where: {
+        id,
+      },
+    });
+    if (!schedule) {
+      return errorResponse(res, "data tidak ditemukan", null, 404);
+    }
+    return successResponse(res, "berhasil menghapus data", schedule);
+    } catch (error) {
+        return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
