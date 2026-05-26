@@ -181,5 +181,48 @@ export const getStudyPlanById = async (req, res) => {
   }
 };
 // createStudyPlan,
+export const createStudyPlan = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+        return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { courseId, ...rest } = req.body;
+    if (!rest.status && (res.gpa == undefined || res.gpa == null)) {
+        return errorResponse(res, "data harus diisi", null, 400);
+    }
+
+    const courseIds = courseId ? courseId.split(",").map(id => id.trim()).filter(id => id !== "") : [];
+    if(courseIds.length == 0){
+        return errorResponse(res, "data harus diisi", null, 400);
+    }
+
+    //1. buat study plan
+    const studyPlan = await prisma.studyPlan.create({
+        data : {
+            ...rest,
+        }
+    })
+    //2. buat study plan course dan insert ke database
+    const studyPlanCourses = courseIds.map(courseId => {
+        studyPlanId: studyPlan.id;
+        courseId: courseId;
+    })
+    await prisma.studyPlanCourse.createMany({
+        data: studyPlanCourses
+    })
+
+    return successResponse(res, "berhasil membuat study plan", {
+        ...studyPlan,
+        courses: studyPlanCourses
+    }, 200);
+    } catch (error) {
+        return errorResponse(res, "gagal mendapatkan semua study plans", error.message, 500);
+  
+    }
+}
 // updateStudyPlan,
 // deleteStudyPlan,
