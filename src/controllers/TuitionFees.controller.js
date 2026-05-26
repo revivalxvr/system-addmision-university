@@ -80,15 +80,19 @@ export const createTuitionFees = async (req, res) => {
         status,
       },
     });
-    return successResponse(res, "berhasil mebuat data tuition fees", tuitionFees);
+    return successResponse(
+      res,
+      "berhasil mebuat data tuition fees",
+      tuitionFees,
+    );
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
 };
 //     updateTuitionFees,
 export const updateTuitionFees = async (req, res) => {
-    try {
-        const tokenCredential = req.user;
+  try {
+    const tokenCredential = req.user;
     if (tokenCredential.role !== "admin") {
       return res.status(401).json({
         success: false,
@@ -98,17 +102,17 @@ export const updateTuitionFees = async (req, res) => {
     const { id } = req.params;
     const { studentId, status } = req.body;
     if (!studentId || !status) {
-        return errorResponse(res, "data harus diisi", null, 401);
+      return errorResponse(res, "data harus diisi", null, 401);
     }
     const existing = await prisma.tuitionFee.findUnique({
-        where: {
-            id,
-        },
-    })
+      where: {
+        id,
+      },
+    });
     if (!existing) {
-        return errorResponse(res, "data tidak ditemukan di database", null, 404);
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
-  
+
     const tuitionFees = await prisma.tuitionFee.update({
       where: {
         id,
@@ -119,8 +123,36 @@ export const updateTuitionFees = async (req, res) => {
       },
     });
     return successResponse(res, "berhasil memperbarui data", tuitionFees);
-    } catch (error) {
-        return errorResponse(res, "terjadi kesalahan", error.message, 500);
-    }
-}
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 //     deleteTuitionFees,
+export const deleteTuitionFees = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { id } = req.params;
+    const existing = await prisma.tuitionFee.findUnique({
+      where: {
+        id,
+      },
+    });
+    if (!existing) {
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
+    }
+    const tuitionFees = await prisma.tuitionFee.delete({
+      where: {
+        id,
+      },
+    });
+    return successResponse(res, "berhasil menghapus data", tuitionFees);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
