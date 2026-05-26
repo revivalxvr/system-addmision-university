@@ -154,6 +154,14 @@ export const deletePayment = async (req, res) => {
       });
     }
     const { id } = req.params;
+    const existing = await prisma.payment.findUnique({
+      where: {
+        id,
+      },
+    });
+    if(!existing) {
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
+    }
     const payment = await prisma.payment.delete({
       where: {
         id,
