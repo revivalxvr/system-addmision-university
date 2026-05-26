@@ -115,4 +115,42 @@ export const createUser = async (req, res) => {
     }
 }
 //     updateUser,
+export const updateUser = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+        const { name, email, password, roleId } = req.body;
+        if (!name || !email || !password || !roleId) {
+            return errorResponse(res, "data harus diisi", null, 400);
+        }
+        const { id } = req.params;
+        const existUser = await prisma.user.findUnique({
+            where: {
+                id,
+            },
+        });
+        if (!existUser) {
+            return errorResponse(res, "data tidak ditemukan di database", null, 404);
+        }
+        const dataToUpdate = {name, email, roleId};
+        if (password) {
+            const hashed = await bcrypt.hash(password, 10);
+            dataToUpdate.password = hashed;
+        }
+        const user = await prisma.user.update({
+            where: {
+                id,
+            },
+            data: dataToUpdate,
+        });
+        return successResponse(res, "berhasil memperbarui data user", user);
+    } catch (error) {
+         return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
 //     deleteUser,
