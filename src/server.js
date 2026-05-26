@@ -15,6 +15,7 @@ import Schedule from "./routes/Schedule.js"
 import UserSiakad from "./routes/UserSiakad.js"
 import TuitionFees from "./routes/TuitionFees.js"
 import Payment from "./routes/Payment.js"
+import StudyPlan from "./routes/StudyPlan.js"
 
 
 dotenv.config();
@@ -44,6 +45,7 @@ app.use("/api/schedule/", Schedule)
 app.use("/api/users/", UserSiakad)
 app.use("/api/tuition-fees/", TuitionFees)
 app.use("/api/payment/", Payment)
+app.use("/api/study-plans/", StudyPlan)
 
 
 app.listen(PORT, () => {
