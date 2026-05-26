@@ -13,7 +13,7 @@ import Lecture from "./routes/Lecture.js"
 import Course from "./routes/Course.js"
 import Schedule from "./routes/Schedule.js"
 import UserSiakad from "./routes/UserSiakad.js"
-
+import TuitionFees from "./routes/TuitionFees.js"
 
 
 dotenv.config();
@@ -41,6 +41,7 @@ app.use("/api/lecture/", Lecture)
 app.use("/api/courses/", Course)
 app.use("/api/schedule/", Schedule)
 app.use("/api/users/", UserSiakad)
+app.use("/api/tuition-fees/", TuitionFees)
 
 
 app.listen(PORT, () => {
