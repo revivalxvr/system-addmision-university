@@ -49,6 +49,20 @@ export const getUserById = async (req, res) => {
         return errorResponse(res, "terjadi kesalahan", error.message, 500);
     }
 }
+//getUserByRole
+export const getUserByRole = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+    } catch (error) {
+         return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
 //     createUser,
 //     updateUser,
 //     deleteUser,

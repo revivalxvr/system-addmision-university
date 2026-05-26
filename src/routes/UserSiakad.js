@@ -14,7 +14,7 @@ router.use(verifyToken);
 
 router.get("/", getAllUsers);
 router.get("/:id", getUserById);
-router.get("/role/:role", getUserByRole);
+router.get("/role/:roleId", getUserByRole);
 router.post("/", createUser);
 router.put("/:id", updateUser);
 router.delete("/:id", deleteUser);
