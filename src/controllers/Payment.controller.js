@@ -154,12 +154,12 @@ export const deletePayment = async (req, res) => {
       });
     }
     const { id } = req.params;
-    const existing = await prisma.payment.findUnique({
+    const existId = await prisma.payment.findUnique({
       where: {
         id,
       },
     });
-    if(!existing) {
+    if(!existId) {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
     const payment = await prisma.payment.delete({
@@ -169,6 +169,6 @@ export const deletePayment = async (req, res) => {
     });
     return successResponse(res, "berhasil mendapatkan data", payment);
   } catch (error) {
-    return errorResponse(res, "gagal mendapatkan data", error.message, 500);
+    return errorResponse(res, "Gagal terjadi kesalahan", error.message, 500);
   }
 };
