@@ -37,9 +37,6 @@ export const getUserById = async (req, res) => {
             where: {
                 id,
             },
-            include: {
-                role: true
-            },
         });
         if (!user) {
             return errorResponse(res, "data tidak ditemukan di data base", null, 404);
