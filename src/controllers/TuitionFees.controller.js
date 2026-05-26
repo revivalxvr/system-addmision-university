@@ -73,7 +73,7 @@ export const createTuitionFees = async (req, res) => {
         message: "Unauthorized",
       });
     }
-    const { studentId, status } = req.params;
+    const { studentId, status } = req.body;
     const tuitionFees = await prisma.tuitionFee.create({
       data: {
         studentId,
