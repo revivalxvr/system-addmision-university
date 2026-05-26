@@ -83,8 +83,8 @@ export const createUser = async (req, res) => {
                 message: "Unauthorized",
             });
         }
-        const { name, email, password, roleId } = req.body;
-        if (!name || !email || !password || !roleId) {
+        const { name, email, password, role } = req.body;
+        if (!name || !email || !password || !role) {
             return errorResponse(res, "data harus diisi", null, 400);
         }
         const existEmail = await prisma.userSiakad.findUnique({
@@ -96,19 +96,19 @@ export const createUser = async (req, res) => {
             return errorResponse(res, "email sudah terdaftar", null, 400);
         }
         const hashed = await bcrypt.hash(password, 10);
-        const user = await prisma.user.create({
+        const user = await prisma.userSiakad.create({
             data: {
                 name,
                 email,
                 password: hashed,
-                roleId,
+                role,
             },
         });
         return successResponse(res, "berhasil membuat data user", {
             id: user.id,
             name: user.name,
             email: user.email,
-            role: user.role,
+            role: user.role
         });
     } catch (error) {
         return errorResponse(res, "terjadi kesalahan", error.message, 500);
