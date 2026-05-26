@@ -12,6 +12,7 @@ import Student from "./routes/Student.js"
 import Lecture from "./routes/Lecture.js"
 import Course from "./routes/Course.js"
 import Schedule from "./routes/Schedule.js"
+import UserSiakad from "./routes/UserSiakad.js"
 
 
 
@@ -39,6 +40,8 @@ app.use("/api/students/", Student)
 app.use("/api/lecture/", Lecture)
 app.use("/api/courses/", Course)
 app.use("/api/schedule/", Schedule)
+app.use("/api/users/", UserSiakad)
+
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
