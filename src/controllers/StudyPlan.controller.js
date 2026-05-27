@@ -22,8 +22,10 @@ export const getAllStudyPlans = async (req, res) => {
             class: {
               select: {
                 year: {
-                  id: true,
-                  name: true,
+                  select: {
+                    id: true,
+                    name: true,
+                  },
                 },
               },
             },
@@ -87,6 +89,7 @@ export const getAllStudyPlans = async (req, res) => {
       200,
     );
   } catch (error) {
+    console.log("=== ERROR ASLI ===", error);
     return errorResponse(res, "gagal mendapatkan semua study plans", null, 500);
   }
 };
@@ -175,138 +178,167 @@ export const getStudyPlanById = async (req, res) => {
         lectureNumber: course.course.lecture.lectureNumber ?? null;
       });
     });
-    return successResponse(res, "berhasil mendapatkan study plan", studyPlan, 200);
+    return successResponse(
+      res,
+      "berhasil mendapatkan study plan",
+      studyPlan,
+      200,
+    );
   } catch (error) {
     return errorResponse(res, "gagal mendapatkan semua study plans", null, 500);
   }
 };
 // createStudyPlan,
 export const createStudyPlan = async (req, res) => {
-    try {
-        const tokenCredential = req.user;
-        if (tokenCredential.role !== "admin") {
-        return res.status(401).json({
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
         success: false,
         message: "Unauthorized",
       });
     }
     const { courseId, ...rest } = req.body;
     if (!rest.status && (res.gpa == undefined || res.gpa == null)) {
-        return errorResponse(res, "data harus diisi", null, 400);
+      return errorResponse(res, "data harus diisi", null, 400);
     }
 
-    const courseIds = courseId ? courseId.split(",").map(id => id.trim()).filter(id => id !== "") : [];
-    if(courseIds.length == 0){
-        return errorResponse(res, "data harus diisi", null, 400);
+    const courseIds = courseId
+      ? courseId
+          .split(",")
+          .map((id) => id.trim())
+          .filter((id) => id !== "")
+      : [];
+    if (courseIds.length == 0) {
+      return errorResponse(res, "data harus diisi", null, 400);
     }
 
     //1. buat study plan
     const studyPlan = await prisma.studyPlan.create({
-        data : {
-            ...rest,
-        }
-    })
+      data: {
+        ...rest,
+      },
+    });
     //2. buat study plan course dan insert ke database
-    const studyPlanCourses = courseIds.map(courseId => {
-        studyPlanId: studyPlan.id;
-        courseId: courseId;
-    })
+    const studyPlanCourses = courseIds.map((courseId) => {
+      studyPlanId: studyPlan.id;
+      courseId: courseId;
+    });
     await prisma.studyPlanCourse.createMany({
-        data: studyPlanCourses
-    })
+      data: studyPlanCourses,
+    });
 
-    return successResponse(res, "berhasil membuat study plan", {
+    return successResponse(
+      res,
+      "berhasil membuat study plan",
+      {
         ...studyPlan,
-        courses: studyPlanCourses
-    }, 200);
-    } catch (error) {
-        return errorResponse(res, "gagal mendapatkan semua study plans", error.message, 500);
-  
-    }
-}
+        courses: studyPlanCourses,
+      },
+      200,
+    );
+  } catch (error) {
+    return errorResponse(
+      res,
+      "gagal mendapatkan semua study plans",
+      error.message,
+      500,
+    );
+  }
+};
 // updateStudyPlan,
 export const updateStudyPlan = async (req, res) => {
-    try {
-         const tokenCredential = req.user;
-        if (tokenCredential.role !== "admin") {
-        return res.status(401).json({
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
         success: false,
         message: "Unauthorized",
       });
     }
     const { id } = req.params;
     const existId = await prisma.studyPlan.findUnique({
-        where : {id},
-        include : {courses : true} // cek relasi ke study plan course
-    })
-    if(!existId) {
-        return errorResponse(res, "data tidak ditemukan di database", null, 404);
+      where: { id },
+      include: { courses: true }, // cek relasi ke study plan course
+    });
+    if (!existId) {
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
     const { courseId, ...rest } = req.body;
     if (!rest.status && (res.gpa == undefined || res.gpa == null)) {
-        return errorResponse(res, "data harus diisi", null, 400);
+      return errorResponse(res, "data harus diisi", null, 400);
     }
 
-    const courseIds = courseId ? courseId.split(",").map(id => id.trim()).filter(id => id !== "") : [];
-    if(courseIds.length == 0){
-        return errorResponse(res, "data harus diisi", null, 400);
+    const courseIds = courseId
+      ? courseId
+          .split(",")
+          .map((id) => id.trim())
+          .filter((id) => id !== "")
+      : [];
+    if (courseIds.length == 0) {
+      return errorResponse(res, "data harus diisi", null, 400);
     }
     //1. update data
     const studyPlan = await prisma.studyPlan.update({
-        where : {id},
-        data : {
-            ...rest,
-        }
-    })
+      where: { id },
+      data: {
+        ...rest,
+      },
+    });
     //2. hapus semua relasi course terlebih dahulu
     await prisma.studyPlanCourse.deleteMany({
-        where : {id}
-    })
+      where: { id },
+    });
     //3. baru update study plan course
-    const studyPlanCourses = courseIds.map(courseId => {
-        studyPlanId: studyPlan.id;
-        courseId: courseId;
-    })
+    const studyPlanCourses = courseIds.map((courseId) => {
+      studyPlanId: studyPlan.id;
+      courseId: courseId;
+    });
     await prisma.studyPlanCourse.createMany({
-        data: studyPlanCourses
-    })
-    return successResponse(res, "berhasil update study plan", {
+      data: studyPlanCourses,
+    });
+    return successResponse(
+      res,
+      "berhasil update study plan",
+      {
         ...studyPlan,
-        courses: studyPlanCourses
-    }, 200);
-    } catch (error) {
-         return errorResponse(res, "terjadi kesalahan", error.message, 500);
-    }
-}
+        courses: studyPlanCourses,
+      },
+      200,
+    );
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 // deleteStudyPlan,
 export const deleteStudyPlan = async (req, res) => {
-    try {
-        const tokenCredential = req.user;
-        if (tokenCredential.role !== "admin") {
-        return res.status(401).json({
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
         success: false,
         message: "Unauthorized",
       });
     }
     const { id } = req.params;
     const existId = await prisma.studyPlan.findUnique({
-        where : {id},
-        include : {courses : true} // cek relasi ke study plan course
-    })
-    if(!existId) {
-        return errorResponse(res, "data tidak ditemukan di database", null, 404);
+      where: { id },
+      include: { courses: true }, // cek relasi ke study plan course
+    });
+    if (!existId) {
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
 
     //1. hapus semua relasi course terlebih dahulu
     await prisma.studyPlanCourse.deleteMany({
-        where : {id}
-    })
+      where: { id },
+    });
     //2. baur hapus yanga ada di table study plan
     await prisma.studyPlan.delete({
-        where : {id}
-    })
-    return successResponse(res, "berhasil menghapus data", { deleteId : id});
-    } catch (error) {
-        return errorResponse(res, "terjadi kesalahan", error.message, 500);
-    }
-}
+      where: { id },
+    });
+    return successResponse(res, "berhasil menghapus data", { deleteId: id });
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
