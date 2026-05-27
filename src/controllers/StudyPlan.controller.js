@@ -226,3 +226,34 @@ export const createStudyPlan = async (req, res) => {
 }
 // updateStudyPlan,
 // deleteStudyPlan,
+export const deleteStudyPlan = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "admin") {
+        return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { id } = req.params;
+    const existId = await prisma.studyPlan.findUnique({
+        where : {id},
+        include : {courses : true} // cek relasi ke study plan course
+    })
+    if(!existId) {
+        return errorResponse(res, "data tidak ditemukan di database", null, 404);
+    }
+
+    //1. hapus semua relasi course terlebih dahulu
+    await prisma.studyPlanCourse.deleteMany({
+        where : {id}
+    })
+    //2. baur hapus yanga ada di table study plan
+    await prisma.studyPlan.delete({
+        where : {id}
+    })
+    return successResponse(res, "berhasil menghapus data", { deleteId : id});
+    } catch (error) {
+        return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
