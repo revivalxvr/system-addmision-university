@@ -119,10 +119,10 @@ export const adminStats = async (req, res) => {
         }
     })
     const fromatedStudyPlans = studyPlans.map(sp => ({
-        courseName = sp.course?.name ?? null,
-        studentName = sp.studyPlan?.student?.name ?? null,
-        lectureName = sp.course?.lecture?.name ?? null,
-        status = sp.studyPlan?.status ?? null
+        courseName : sp.course?.name ?? null,
+        studentName : sp.studyPlan?.student?.name ?? null,
+        lectureName : sp.course?.lecture?.name ?? null,
+        status : sp.studyPlan?.status ?? null
     }))
 
     //hitung paid & unpaid
