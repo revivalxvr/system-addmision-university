@@ -199,7 +199,7 @@ export const createStudyPlan = async (req, res) => {
       });
     }
     const { courseId, ...rest } = req.body;
-    if (!rest.status && (res.gpa == undefined || res.gpa == null)) {
+    if (!rest.status && (rest.gpa === undefined || rest.gpa === null)) {
       return errorResponse(res, "data harus diisi", null, 400);
     }
 
@@ -209,7 +209,7 @@ export const createStudyPlan = async (req, res) => {
           .map((id) => id.trim())
           .filter((id) => id !== "")
       : [];
-    if (courseIds.length == 0) {
+    if (courseIds.length === 0) {
       return errorResponse(res, "data harus diisi", null, 400);
     }
 
@@ -217,13 +217,16 @@ export const createStudyPlan = async (req, res) => {
     const studyPlan = await prisma.studyPlan.create({
       data: {
         ...rest,
+        gpa: rest.gpa ? Number(rest.gpa) : null,
       },
     });
     //2. buat study plan course dan insert ke database
-    const studyPlanCourses = courseIds.map((courseId) => {
-      studyPlanId: studyPlan.id;
-      courseId: courseId;
-    });
+    //Gunakan implicit return (kurung biasa) agar objek langsung dikembalikan
+    const studyPlanCourses = courseIds.map((id) => ({
+      studyPlanId: studyPlan.id,
+      courseId: id, // Menggunakan id dari hasil map
+    }));
+
     await prisma.studyPlanCourse.createMany({
       data: studyPlanCourses,
     });
@@ -238,12 +241,7 @@ export const createStudyPlan = async (req, res) => {
       200,
     );
   } catch (error) {
-    return errorResponse(
-      res,
-      "gagal mendapatkan semua study plans",
-      error.message,
-      500,
-    );
+    return errorResponse(res, "gagal membuat study plans", error.message, 500);
   }
 };
 // updateStudyPlan,
