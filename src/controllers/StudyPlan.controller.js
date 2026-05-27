@@ -191,7 +191,7 @@ export const getStudyPlanById = async (req, res) => {
     return successResponse(
       res,
       "berhasil mendapatkan study plan",
-      formattedStudyPlan, //  Ubah dari studyPlan menjadi formattedStudyPlan
+      formattedStudyPlan, 
       200,
     );
   } catch (error) {
