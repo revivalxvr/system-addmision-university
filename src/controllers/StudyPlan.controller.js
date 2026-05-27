@@ -328,13 +328,17 @@ export const deleteStudyPlan = async (req, res) => {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
 
-    //1. hapus semua relasi course terlebih dahulu
+    // 1. Hapus semua data anak di tabel studyPlanCourse terlebih dahulu
     await prisma.studyPlanCourse.deleteMany({
-      where: { id },
+      where: {
+        studyPlanId: id, // Hapus yang terikat dengan ID study plan ini
+      },
     });
-    //2. baur hapus yanga ada di table study plan
+    // 2. Setelah data anak bersih, baru hapus data induknya
     await prisma.studyPlan.delete({
-      where: { id },
+      where: {
+        id: id,
+      },
     });
     return successResponse(res, "berhasil menghapus data", { deleteId: id });
   } catch (error) {
