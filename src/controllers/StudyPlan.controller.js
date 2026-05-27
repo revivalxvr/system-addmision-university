@@ -106,10 +106,10 @@ export const getStudyPlanById = async (req, res) => {
     }
 
     const { id } = req.params;
+    
+    // 1. Ambil data tunggal dari database
     const studyPlan = await prisma.studyPlan.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
       include: {
         student: {
           select: {
@@ -120,8 +120,10 @@ export const getStudyPlanById = async (req, res) => {
             class: {
               select: {
                 year: {
-                  id: true,
-                  name: true,
+                  select: { //  PERBAIKAN: Tambahkan select yang kurang di sini
+                    id: true,
+                    name: true,
+                  }
                 },
               },
             },
@@ -148,45 +150,54 @@ export const getStudyPlanById = async (req, res) => {
         },
       },
     });
+
+    // 2. Validasi jika data tidak ditemukan
     if (!studyPlan) {
       return errorResponse(res, "study plan tidak ditemukan", null, 404);
     }
 
-    const formattedStudyPlans = studyPlans.map((studyPlan) => {
-      id: studyPlan.id;
-      studentId: studyPlan.studentId;
-      status: studyPlan.status;
-      gpa: studyPlan.gpa;
-      createdAt: studyPlan.createdAt;
-      updatedAt: studyPlan.updatedAt;
+    // 3. FORMAT DATA: Langsung buat objek baru, TIDAK PERLU .map() karena bukan array
+    const formattedStudyPlan = {
+      id: studyPlan.id,
+      studentId: studyPlan.studentId,
+      status: studyPlan.status,
+      gpa: studyPlan.gpa,
+      createdAt: studyPlan.createdAt,
+      updatedAt: studyPlan.updatedAt,
 
-      //student data
-      studentId: studyPlan.student.id;
-      studentName: studyPlan.student.name;
-      studentNumber: studyPlan.student.studentNumber;
-      studentYearId: studyPlan.student.class?.year?.id ?? null;
-      studentYearName: studyPlan.student.class?.year?.name ?? null;
+      // Data Mahasiswa
+      studentName: studyPlan.student?.name ?? null,
+      studentNumber: studyPlan.student?.studentNumber ?? null,
+      studentSemester: studyPlan.student?.semester ?? null,
+      studentYearId: studyPlan.student?.class?.year?.id ?? null,
+      studentYearName: studyPlan.student?.class?.year?.name ?? null,
 
-      course: studyPlan.courses.map((course) => {
-        id: course.id;
-        courseId: course.courseId;
-        studyPlanId: course.studyPlanId;
-        courseName: course.course.name;
-        courseCode: course.course.code;
-        credits: course.course.credits;
-        lectureId: course.course.lecture.id ?? null;
-        lectureName: course.course.lecture.name ?? null;
-        lectureNumber: course.course.lecture.lectureNumber ?? null;
-      });
-    });
+      // Data Courses (Gunakan .map() di sini karena courses di dalam studyPlan berbentuk Array)
+      courses: studyPlan.courses.map((c) => ({
+        id: c.id,
+        courseId: c.courseId,
+        studyPlanId: c.studyPlanId,
+        courseName: c.course?.name ?? null,
+        courseCode: c.course?.code ?? null,
+        courseScore: c.score,
+        credits: c.course?.credits ?? null,
+        lectureId: c.course?.lecture?.id ?? null,
+        lectureName: c.course?.lecture?.name ?? null,
+        lectureNumber: c.course?.lecture?.lectureNumber ?? null,
+      })),
+    };
+
+    // 4. Kirim data yang sudah di-format (formattedStudyPlan)
     return successResponse(
       res,
       "berhasil mendapatkan study plan",
-      studyPlan,
+      formattedStudyPlan, //  Ubah dari studyPlan menjadi formattedStudyPlan
       200,
     );
   } catch (error) {
-    return errorResponse(res, "gagal mendapatkan semua study plans", null, 500);
+    // Membantu Anda melihat log asli di terminal console backend jika ada error lain
+    console.error("Error GetById: ", error.message); 
+    return errorResponse(res, "gagal mendapatkan study plan by id", error.message, 500);
   }
 };
 // createStudyPlan,
