@@ -214,33 +214,36 @@ export const createStudyPlan = async (req, res) => {
       return errorResponse(res, "data harus diisi", null, 400);
     }
 
-    //1. buat study plan
-    const studyPlan = await prisma.studyPlan.create({
-      data: {
-        ...rest,
-        gpa: rest.gpa ? Number(rest.gpa) : null,
-      },
-    });
-    //2. buat study plan course dan insert ke database
-    //Gunakan implicit return (kurung biasa) agar objek langsung dikembalikan
-    const studyPlanCourses = courseIds.map((id) => ({
-      studyPlanId: studyPlan.id,
-      courseId: id, // Menggunakan id dari hasil map
-    }));
+    // Bungkus proses create ke dalam Prisma $transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Buat study plan (Gunakan 'tx', bukan 'prisma')
+      const studyPlan = await tx.studyPlan.create({
+        data: {
+          ...rest,
+          gpa: rest.gpa ? Number(rest.gpa) : null,
+        },
+      });
 
-    await prisma.studyPlanCourse.createMany({
-      data: studyPlanCourses,
-    });
+      // 2. Siapkan data study plan courses
+      const studyPlanCourses = courseIds.map((id) => ({
+        studyPlanId: studyPlan.id,
+        courseId: id,
+      }));
 
-    return successResponse(
-      res,
-      "berhasil membuat study plan",
-      {
+      // 3. Insert ke database (Gunakan 'tx', bukan 'prisma')
+      await tx.studyPlanCourse.createMany({
+        data: studyPlanCourses,
+      });
+
+      // Kembalikan data gabungan jika semuanya sukses
+      return {
         ...studyPlan,
         courses: studyPlanCourses,
-      },
-      200,
-    );
+      };
+    });
+
+    // Jika kode sampai di sini, artinya langkah 1 dan 3 BERHASIL SEPERTI SATU KESATUAN
+    return successResponse(res, "berhasil membuat study plan", result, 200);
   } catch (error) {
     return errorResponse(res, "gagal membuat study plans", error.message, 500);
   }
