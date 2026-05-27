@@ -269,16 +269,21 @@ export const updateStudyPlan = async (req, res) => {
         message: "Unauthorized",
       });
     }
+
     const { id } = req.params;
+
+    // Cek apakah data study plan ada di database
     const existId = await prisma.studyPlan.findUnique({
       where: { id },
-      include: { courses: true }, // cek relasi ke study plan course
     });
     if (!existId) {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
+
     const { courseId, ...rest } = req.body;
-    if (!rest.status && (res.gpa == undefined || res.gpa == null)) {
+    
+    // PERBAIKAN 1: Ganti res.gpa menjadi rest.gpa
+    if (!rest.status && (rest.gpa === undefined || rest.gpa === null)) {
       return errorResponse(res, "data harus diisi", null, 400);
     }
 
@@ -288,39 +293,58 @@ export const updateStudyPlan = async (req, res) => {
           .map((id) => id.trim())
           .filter((id) => id !== "")
       : [];
-    if (courseIds.length == 0) {
+
+    if (courseIds.length === 0) {
       return errorResponse(res, "data harus diisi", null, 400);
     }
-    //1. update data
-    const studyPlan = await prisma.studyPlan.update({
-      where: { id },
-      data: {
-        ...rest,
-      },
+
+    // PERBAIKAN 2: Bungkus semua proses manipulasi data ke dalam $transaction agar aman
+    const result = await prisma.$transaction(async (tx) => {
+      
+      // 1. Update data utama StudyPlan
+      const updatedStudyPlan = await tx.studyPlan.update({
+        where: { id },
+        data: {
+          ...rest,
+          gpa: rest.gpa ? Number(rest.gpa) : null,
+        },
+      });
+
+      // 2. PERBAIKAN 3: Hapus data relasi course lama BERDASARKAN studyPlanId
+      await tx.studyPlanCourse.deleteMany({
+        where: {
+          studyPlanId: id, // Menggunakan foreign key, bukan id primary key anak
+        },
+      });
+
+      // 3. PERBAIKAN 4: Format ulang mapping array dengan tanda ( ) agar menghasilkan objek valid
+      const studyPlanCourses = courseIds.map((cId) => ({
+        studyPlanId: updatedStudyPlan.id,
+        courseId: cId,
+      }));
+
+      // 4. Masukkan daftar mata kuliah baru ke database
+      await tx.studyPlanCourse.createMany({
+        data: studyPlanCourses,
+      });
+
+      return {
+        ...updatedStudyPlan,
+        courses: studyPlanCourses,
+      };
     });
-    //2. hapus semua relasi course terlebih dahulu
-    await prisma.studyPlanCourse.deleteMany({
-      where: { id },
-    });
-    //3. baru update study plan course
-    const studyPlanCourses = courseIds.map((courseId) => {
-      studyPlanId: studyPlan.id;
-      courseId: courseId;
-    });
-    await prisma.studyPlanCourse.createMany({
-      data: studyPlanCourses,
-    });
+
+    // Kirim response sukses jika transaksi aman
     return successResponse(
       res,
       "berhasil update study plan",
-      {
-        ...studyPlan,
-        courses: studyPlanCourses,
-      },
+      result,
       200,
     );
+
   } catch (error) {
-    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    console.error("Error Update Study Plan: ", error.message);
+    return errorResponse(res, "terjadi kesalahan saat update data", error.message, 500);
   }
 };
 // deleteStudyPlan,
