@@ -53,35 +53,36 @@ export const getAllStudyPlans = async (req, res) => {
       },
     });
 
-    const formattedStudyPlans = studyPlans.map((studyPlan) => {
-      id: studyPlan.id;
-      studentId: studyPlan.studentId;
-      status: studyPlan.status;
-      gpa: studyPlan.gpa;
-      createdAt: studyPlan.createdAt;
-      updatedAt: studyPlan.updatedAt;
+    const formattedStudyPlans = studyPlans.map((studyPlan) => ({
+      id: studyPlan.id,
+      studentId: studyPlan.studentId,
+      status: studyPlan.status,
+      gpa: studyPlan.gpa,
+      createdAt: studyPlan.createdAt,
+      updatedAt: studyPlan.updatedAt,
 
-      //student data
-      studentId: studyPlan.student.id;
-      studentName: studyPlan.student.name;
-      studentNumber: studyPlan.student.studentNumber;
-      studentYearId: studyPlan.student.class?.year?.id ?? null;
-      studentSemester: studyPlan.student.semester;
-      studentYearName: studyPlan.student.class?.year?.name ?? null;
+      // Student data (Gunakan koma, bukan titik koma)
+      studentName: studyPlan.student?.name ?? null,
+      studentNumber: studyPlan.student?.studentNumber ?? null,
+      studentYearId: studyPlan.student?.class?.year?.id ?? null,
+      studentSemester: studyPlan.student?.semester ?? null,
+      studentYearName: studyPlan.student?.class?.year?.name ?? null,
 
-      course: studyPlan.courses.map((course) => {
-        id: course.id;
-        courseId: course.courseId;
-        studyPlanId: course.studyPlanId;
-        courseName: course.course.name;
-        courseCode: course.course.code;
-        courseScore: course.score;
-        credits: course.course.credits;
-        lectureId: course.course.lecture.id ?? null;
-        lectureName: course.course.lecture.name ?? null;
-        lectureNumber: course.course.lecture.lectureNumber ?? null;
-      });
-    });
+      // Perbaikan Map Kedua: Harus return object juga
+      courses: studyPlan.courses.map((c) => ({
+        id: c.id,
+        courseId: c.courseId,
+        studyPlanId: c.studyPlanId,
+        courseName: c.course?.name ?? null, // Gunakan opsi ? untuk jaga-jaga jika data null
+        courseCode: c.course?.code ?? null,
+        courseScore: c.score,
+        credits: c.course?.credits ?? null,
+        lectureId: c.course?.lecture?.id ?? null,
+        lectureName: c.course?.lecture?.name ?? null,
+        lectureNumber: c.course?.lecture?.lectureNumber ?? null,
+      })), // Tutup map course
+    })); // Tutup map studyPlan
+
     return successResponse(
       res,
       "berhasil mendapatkan semua study plans",
@@ -90,7 +91,7 @@ export const getAllStudyPlans = async (req, res) => {
     );
   } catch (error) {
     console.log("=== ERROR ASLI ===", error);
-    return errorResponse(res, "gagal mendapatkan semua study plans", null, 500);
+    return errorResponse(res, "terjadi kesalahan", null, 500);
   }
 };
 // getStudyPlanById,
