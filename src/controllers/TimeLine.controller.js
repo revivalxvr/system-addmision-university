@@ -68,6 +68,9 @@ export const updateTimeLine = async (req, res) => {
         id,
       },
     })
+    if(!existing) {
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
+    }
     const timeLine = await prisma.timeLine.update({
       where: {
         id,
@@ -98,6 +101,9 @@ export const deleteTimeLine = async (req, res) => {
         id,
       },
     })
+    if (!existing) {
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
+    }
     const timeLine = await prisma.timeLine.delete({
       where: {
         id,
