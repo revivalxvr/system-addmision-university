@@ -109,7 +109,7 @@ export const deleteTimeLine = async (req, res) => {
         id,
       },
     });
-    return successResponse(res, "berhasil mendapatkan data", timeLine);
+    return successResponse(res, "berhasil mengahpus data", timeLine);
   } catch (error) {
     return errorResponse(res, "gagal mendapatkan data", error.message, 500);
   }
