@@ -82,3 +82,29 @@ export const updateTimeLine = async (req, res) => {
     return errorResponse(res, "gagal mendapatkan data", error.message, 500);
   }
 };
+
+export const deleteTimeLine = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const { id } = req.params;
+    const existing = await prisma.timeLine.findUnique({
+      where: {
+        id,
+      },
+    })
+    const timeLine = await prisma.timeLine.delete({
+      where: {
+        id,
+      },
+    });
+    return successResponse(res, "berhasil mendapatkan data", timeLine);
+  } catch (error) {
+    return errorResponse(res, "gagal mendapatkan data", error.message, 500);
+  }
+};
