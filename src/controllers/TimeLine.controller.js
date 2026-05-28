@@ -1,5 +1,5 @@
-import prisma from "../config/Prisma";
-import { successResponse, errorResponse } from "../utils/response";
+import prisma from "../config/Prisma.js";
+import { successResponse, errorResponse } from "../utils/response.js";
 
 //   getAllTimeLines,
 //     createTimeLine,
