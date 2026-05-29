@@ -119,7 +119,7 @@ export const getSecheduleById = async (req, res) => {
         message: "Unauthorized student",
       });
     }
-    
+
     const { id } = tokenCredential;
     const schedule = await prisma.schedule.findMany({
       where: {
@@ -197,6 +197,67 @@ export const getSecheduleById = async (req, res) => {
   }
 };
 // getAllCourses,
+export const getAllCourses = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "student") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized student",
+      });
+    }
+    const student = await prisma.student.findUnique({
+        where :
+        {
+            id : tokenCredential.id
+        }, 
+        include : {
+            class : {
+                include : {
+                    year : true
+                }
+            }
+        }
+    })
+    if(!student) {
+        return errorResponse(res, "data tidak ditemukan", null, 404);
+    }
+    const courses = await prisma.course.findMany({
+        include : {
+            lecture : {
+                include : {
+                    major : {
+                        include : {
+                            faculty : true
+                        }
+                    }
+                }
+            }
+        }
+    })
+
+    const formattedData = courses.map((c) => ({
+       studentId : student.id,
+       studentName: student.name,
+       studentNumber: student.studentNumber,
+       year: student.class?.year?.name || null,
+       course : {
+            id: c.id,
+            name: c.name,
+            code: c.code,
+            credits: c.credits,
+            lectureId: c.lectureId,
+            lectureName: c.lecture.name,
+            majorName : c.lecture.major.name,
+            facultyName: c.lecture.major.faculty.name
+       }
+    }))
+
+    return successResponse(res, "berhasil mendapatkan data", formattedData, 200);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 // createStudyPlan,
 export const createStudyPlan = async (req, res) => {
   try {
@@ -246,6 +307,13 @@ export const createStudyPlan = async (req, res) => {
         courses: studyPlanCourses,
       };
     });
+
+    return successResponse(
+      res,
+      "berhasil membuat study plan",
+      result,
+      201
+    );
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
@@ -254,7 +322,7 @@ export const createStudyPlan = async (req, res) => {
 export const getStudyPlanById = async (req, res) => {
   try {
     const tokenCredential = req.user;
-   
+
     if (tokenCredential.role !== "student") {
       return res.status(401).json({
         success: false,
@@ -262,31 +330,30 @@ export const getStudyPlanById = async (req, res) => {
       });
     }
 
-   
-     const { id } = tokenCredential;
+    const { id } = tokenCredential;
     // 1. Ambil data tunggal dari database
     const studyPlan = await prisma.studyPlan.findMany({
       where: { studentId: id },
       include: {
-          student : {
-            include : {
-                class : {
-                    include : {
-                        year : true,
-                    }
-                }
-            }
+        student: {
+          include: {
+            class: {
+              include: {
+                year: true,
+              },
+            },
           },
-          courses : {
-            include : {
-                course : {
-                    include : {
-                        lecture : true,
-                    }
-                }
-            }
-          }
-      }
+        },
+        courses: {
+          include: {
+            course: {
+              include: {
+                lecture: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     // 2. Validasi jika data tidak ditemukan
@@ -296,33 +363,32 @@ export const getStudyPlanById = async (req, res) => {
 
     // 3. FORMAT DATA: Langsung buat objek baru, TIDAK PERLU .map() karena bukan array
     const formattedStudyPlan = studyPlan.map((plan) => ({
-        id : plan.id,
-        status : plan.status,
-        createdAt : plan.createdAt,
-        studentNumber : plan.student.studentNumber,
-        stundentId : plan.student.id,
-        studentName : plan.student.name,
-        semester : plan.student.semester,
-        year : plan.student.class?.year?.name,
-        gpa : plan.gpa,
+      id: plan.id,
+      status: plan.status,
+      createdAt: plan.createdAt,
+      studentNumber: plan.student.studentNumber,
+      stundentId: plan.student.id,
+      studentName: plan.student.name,
+      semester: plan.student.semester,
+      year: plan.student.class?.year?.name,
+      gpa: plan.gpa,
 
-        courses : plan.courses.map((c) => ({
-            id : c.course.id,
-            name : c.course?.name || null,
-            code : c.course?.code || null,
-            credits : c.course?.credits || null,
-            score : c.score,
-            lectureName : c.course.lecture.name,
-            lectureNumber : c.course.lecture.lectureNumber
-          
-        })),
+      courses: plan.courses.map((c) => ({
+        id: c.course.id,
+        name: c.course?.name || null,
+        code: c.course?.code || null,
+        credits: c.course?.credits || null,
+        score: c.score,
+        lectureName: c.course.lecture.name,
+        lectureNumber: c.course.lecture.lectureNumber,
+      })),
     }));
 
     // 4. Kirim data yang sudah di-format (formattedStudyPlan)
     return successResponse(
       res,
       "berhasil mendapatkan study plan",
-      formattedStudyPlan, 
+      formattedStudyPlan,
       200,
     );
   } catch (error) {
