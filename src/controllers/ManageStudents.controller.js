@@ -29,7 +29,7 @@ export const registerStudent = async (req, res) => {
     // 3. Simpan ke database menggunakan Prisma
     const user = await prisma.student.update({
       where: {
-        id : emailExist.id
+        id: emailExist.id,
       },
       data: {
         password: hashed,
@@ -112,7 +112,7 @@ export const logoutStudent = async (req, res) => {
 export const getSecheduleById = async (req, res) => {
   try {
     const tokenCredential = req.user;
-  
+
     if (tokenCredential.role !== "student") {
       return res.status(401).json({
         success: false,
@@ -132,78 +132,134 @@ export const getSecheduleById = async (req, res) => {
     const studentId = studentData.id;
 
     const schedule = await prisma.schedule.findMany({
-        where : {
-            class :{
-                student : {
-                    some : {id : studentId}
-                }
-            }
+      where: {
+        class: {
+          student: {
+            some: { id: studentId },
+          },
         },
-        include : {
-            class : {
-                include : {
-                    year: true,
-                major : true
-                }
-            }, 
-            course : {
-                include : {
-                    lecture : true
-                }
-            }
-        }
+      },
+      include: {
+        class: {
+          include: {
+            year: true,
+            major: true,
+          },
+        },
+        course: {
+          include: {
+            lecture: true,
+          },
+        },
+      },
     });
     if (!schedule || schedule.length === 0) {
       return errorResponse(res, "data tidak ditemukan", null, 404);
     }
 
     const formattedSchedule = schedule.map((item) => ({
-        id : item.id,
-        timeStart : item.timeStart,
-        timeEnd : item.timeEnd,
-        day : item.day,
-        classId : item.classId,
-        courseId : item.courseId,
-        createdAt : item.createdAt,
-        updatedAt : item.updatedAt,
+      id: item.id,
+      timeStart: item.timeStart,
+      timeEnd: item.timeEnd,
+      day: item.day,
+      classId: item.classId,
+      courseId: item.courseId,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
 
-        //tabel calss
-        class : {
-            id : item.class.id,
-            yearId : item.class.yearId,
-            majorId : item.class.majorId,
-            createdAt : item.class.createdAt,
-            updatedAt : item.class.updatedAt,
-            year : item.class.year,
-            major : {
-                id : item.class.major.id,
-                name : item.class.major.name,
-                code : item.class.major.code,
-                createdAt : item.class.major.createdAt,
-                updatedAt : item.class.major.updatedAt,
-
-            }
+      //tabel calss
+      class: {
+        id: item.class.id,
+        yearId: item.class.yearId,
+        majorId: item.class.majorId,
+        createdAt: item.class.createdAt,
+        updatedAt: item.class.updatedAt,
+        year: item.class.year,
+        major: {
+          id: item.class.major.id,
+          name: item.class.major.name,
+          code: item.class.major.code,
+          createdAt: item.class.major.createdAt,
+          updatedAt: item.class.major.updatedAt,
         },
-        course : {
-            id : item.course.id,
-            name : item.course.name,
-            code : item.course.code,
-            lectureId : item.course.lectureId,
-            lectureName : item.course.lecture?.name || null,
-            lectureNumber : item.course.lecture?.lectureNumber || null,
-            credits : item.course.credits,
-            createdAt : item.course.createdAt,
-            updatedAt : item.course.updatedAt,
-            updatedAt : item.course.updatedAt
-        }
+      },
+      course: {
+        id: item.course.id,
+        name: item.course.name,
+        code: item.course.code,
+        lectureId: item.course.lectureId,
+        lectureName: item.course.lecture?.name || null,
+        lectureNumber: item.course.lecture?.lectureNumber || null,
+        credits: item.course.credits,
+        createdAt: item.course.createdAt,
+        updatedAt: item.course.updatedAt,
+        updatedAt: item.course.updatedAt,
+      },
     }));
-    return successResponse(res, "berhasil mendapatkan data", formattedSchedule, 200);
+    return successResponse(
+      res,
+      "berhasil mendapatkan data",
+      formattedSchedule,
+      200,
+    );
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
 };
 // getAllCourses,
 // createStudyPlan,
+export const createStudyPlan = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    const { id } = tokenCredential;
+    if (tokenCredential.role !== "student") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized student",
+      });
+    }
+
+    const { courseId, ...rest } = req.body;
+
+    const courseIds = courseId
+      ? courseId
+          .split(",")
+          .map((id) => id.trim())
+          .filter((id) => id !== "")
+      : [];
+    if (courseIds.length === 0) {
+      return errorResponse(res, "data harus diisi", null, 400);
+    }
+      const result = await prisma.$transaction(async (tx) => {
+      // 1. Buat study plan (Gunakan 'tx', bukan 'prisma')
+      const studyPlan = await tx.studyPlan.create({
+        data: {
+          studentId: id,
+          ...rest,
+        },
+      });
+
+      // 2. Siapkan data study plan courses
+      const studyPlanCourses = courseIds.map((id) => ({
+        studyPlanId: studyPlan.id,
+        courseId: id,
+      }));
+
+      // 3. Insert ke database (Gunakan 'tx', bukan 'prisma')
+      await tx.studyPlanCourse.createMany({
+        data: studyPlanCourses,
+      });
+
+      // Kembalikan data gabungan jika semuanya sukses
+      return {
+        ...studyPlan,
+        courses: studyPlanCourses,
+      };
+    });
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 // getStudyPlanById,
 // getPaymentById,
 // getStudentStats,

@@ -7,7 +7,7 @@ import {
 
     getSecheduleById,
     // getAllCourses,
-    // createStudyPlan,
+    createStudyPlan,
     // getStudyPlanById,
     // getPaymentById,
     // getStudentStats,
@@ -24,7 +24,7 @@ router.use(verifyToken); // semua router di bawah ini membutuhkan token
 router.post("/logout", logoutStudent);
 router.get("/schedule", getSecheduleById); //id yg di maksud id student bkn id schedule di database
 // router.get("/courses", getAllCourses);
-// router.post("/studyplan", createStudyPlan);
+router.post("/studyplan", createStudyPlan);
 // router.get("/studyplan/:id", getStudyPlanById);
 // router.get("/payment/:id", getPaymentById);
 // router.get("/stats/:id", getStudentStats);
