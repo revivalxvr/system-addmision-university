@@ -13,20 +13,15 @@ export const registerStudent = async (req, res) => {
     // 1. Validasi Input
     if (!name || !email || !password) {
       // Sesuai helper: res, message, data (null), status (400)
-      return errorResponse(
-        res,
-        " email, password,  harus diisi",
-        null,
-        400,
-      );
+      return errorResponse(res, " email, password,  harus diisi", null, 400);
     }
     const emailExist = await prisma.student.findFirst({
-        where: {
-            email: email
-        }
-    })
+      where: {
+        email: email,
+      },
+    });
     if (emailExist) {
-        return errorResponse(res, "email sudah terdaftar", null, 400);
+      return errorResponse(res, "email sudah terdaftar", null, 400);
     }
     // 2. Hash password sebelum di simpan dalam database
     const hashed = await bcrypt.hash(password, 10);
@@ -40,10 +35,12 @@ export const registerStudent = async (req, res) => {
       },
     });
 
-    return successResponse(res, "berhasil mendaftar",
+    return successResponse(
+      res,
+      "berhasil mendaftar",
       {
         id: user.id,
-        name:user.name,
+        name: user.name,
         email: user.email,
         role: user.role,
       },
@@ -82,12 +79,10 @@ export const loginStudent = async (req, res) => {
       return errorResponse(res, "email atau password salah", null, 401);
     }
 
-    // 4. Buat token JWT 
-    const token = jwt.sign(
-      { id: match.id, role: match.role }, 
-      JWT_SECRET, 
-      { expiresIn: "1d" }
-    );
+    // 4. Buat token JWT
+    const token = jwt.sign({ id: match.id, role: match.role }, JWT_SECRET, {
+      expiresIn: "1d",
+    });
 
     // 5. Set cookie token
     res.cookie("token", token, cookieOptions(req));
@@ -100,7 +95,6 @@ export const loginStudent = async (req, res) => {
       role: match.role,
       token: token,
     });
-
   } catch (error) {
     return errorResponse(res, "gagal untuk login", error.message, 500);
   }
@@ -115,6 +109,85 @@ export const logoutStudent = async (req, res) => {
   }
 };
 // getSecheduleById,
+export const getSecheduleById = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    const {id} = req.user; // untuk mendapatkan user id yang sedang login
+    if (tokenCredential.role !== "student") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized student",
+      });
+    }
+
+    const schedule = await prisma.schedule.findMany({
+        wheere : {
+            class :{
+                student : {
+                    name : {id : id}
+                }
+            }
+        },
+        include : {
+            class : {
+                year: true,
+                major : true
+            }, 
+            course : {
+                include : {
+                    lecture : true
+                }
+            }
+        }
+    })
+    if (!schedule || schedule.length === 0) {
+      return errorResponse(res, "data tidak ditemukan", null, 404);
+    }
+
+    const formattedSchedule = schedule.map((item) => ({
+        id : item.id,
+        timeStart : item.timeStart,
+        timeEnd : item.timeEnd,
+        classId : item.classId,
+        courseId : item.courseId,
+        createdAt : item.createdAt,
+        updatedAt : item.updatedAt,
+
+        //tabel calss
+        class : {
+            id : item.class.id,
+            yearId : item.class.yearId,
+            majorId : item.class.majorId,
+            createdAt : item.class.createdAt,
+            updatedAt : item.class.updatedAt,
+            year : item.class.year,
+            major : {
+                id : item.class.major.id,
+                name : item.class.major.name,
+                code : item.class.major.code,
+                createdAt : item.class.major.createdAt,
+                updatedAt : item.class.major.updatedAt,
+
+            }
+        },
+        course : {
+            id : item.course.id,
+            name : item.course.name,
+            code : item.course.code,
+            lectureId : item.course.lectureId,
+            lectureName : item.course.lecture?.name || null,
+            lectureNumber : item.course.lecture?.lectureNumber || null,
+            credits : item.course.credits,
+            createdAt : item.course.createdAt,
+            updatedAt : item.course.updatedAt,
+            updatedAt : item.course.updatedAt
+        }
+    }));
+    return successResponse(res, "berhasil mendapatkan data", formattedSchedule, 200);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 // getAllCourses,
 // createStudyPlan,
 // getStudyPlanById,
