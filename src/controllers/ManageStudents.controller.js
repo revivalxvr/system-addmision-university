@@ -8,10 +8,10 @@ const JWT_SECRET = process.env.JWT_SECRET || "secret";
 // registerStudent,
 export const registerStudent = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { email, password } = req.body;
 
     // 1. Validasi Input
-    if (!name || !email || !password) {
+    if (!email || !password) {
       // Sesuai helper: res, message, data (null), status (400)
       return errorResponse(res, " email, password,  harus diisi", null, 400);
     }
@@ -20,17 +20,18 @@ export const registerStudent = async (req, res) => {
         email: email,
       },
     });
-    if (emailExist) {
-      return errorResponse(res, "email sudah terdaftar", null, 400);
+    if (!emailExist) {
+      return errorResponse(res, "email tidak terdaftar", null, 400);
     }
     // 2. Hash password sebelum di simpan dalam database
     const hashed = await bcrypt.hash(password, 10);
 
     // 3. Simpan ke database menggunakan Prisma
-    const user = await prisma.student.create({
+    const user = await prisma.student.update({
+      where: {
+        id : emailExist.id
+      },
       data: {
-        name,
-        email,
         password: hashed,
       },
     });
@@ -40,7 +41,6 @@ export const registerStudent = async (req, res) => {
       "berhasil mendaftar",
       {
         id: user.id,
-        name: user.name,
         email: user.email,
         role: user.role,
       },
