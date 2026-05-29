@@ -112,26 +112,39 @@ export const logoutStudent = async (req, res) => {
 export const getSecheduleById = async (req, res) => {
   try {
     const tokenCredential = req.user;
-    const {id} = req.user; // untuk mendapatkan user id yang sedang login
+  
     if (tokenCredential.role !== "student") {
       return res.status(401).json({
         success: false,
         message: "Unauthorized student",
       });
     }
+    const studentData = await prisma.student.findUnique({
+      where: {
+        id: tokenCredential.id, // Mendapatkan user yang sedang siapa yang sedang login
+      },
+    });
+    if (!studentData) {
+      return errorResponse(res, "Profil mahasiswa tidak ditemukan", null, 404);
+    }
+
+    // 2. Gunakan ID asli dari tabel Student (bukan ID dari token User)
+    const studentId = studentData.id;
 
     const schedule = await prisma.schedule.findMany({
-        wheere : {
+        where : {
             class :{
                 student : {
-                    name : {id : id}
+                    some : {id : studentId}
                 }
             }
         },
         include : {
             class : {
-                year: true,
+                include : {
+                    year: true,
                 major : true
+                }
             }, 
             course : {
                 include : {
@@ -139,7 +152,7 @@ export const getSecheduleById = async (req, res) => {
                 }
             }
         }
-    })
+    });
     if (!schedule || schedule.length === 0) {
       return errorResponse(res, "data tidak ditemukan", null, 404);
     }
@@ -148,6 +161,7 @@ export const getSecheduleById = async (req, res) => {
         id : item.id,
         timeStart : item.timeStart,
         timeEnd : item.timeEnd,
+        day : item.day,
         classId : item.classId,
         courseId : item.courseId,
         createdAt : item.createdAt,
