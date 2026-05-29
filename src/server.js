@@ -18,6 +18,7 @@ import Payment from "./routes/Payment.js"
 import StudyPlan from "./routes/StudyPlan.js"
 import adminStats from "./routes/adminStats.js"
 import TimeLine from "./routes/TimeLine.js"
+import ManageStudents from "./routes/ManageStudents.js"
 
 
 dotenv.config();
@@ -50,6 +51,7 @@ app.use("/api/payment/", Payment)
 app.use("/api/study-plans/", StudyPlan)
 app.use("/api/stats/", adminStats)
 app.use("/api/time-line/", TimeLine)
+app.use("/api/manage-students", ManageStudents)
 
 
 app.listen(PORT, () => {
