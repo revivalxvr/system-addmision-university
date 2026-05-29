@@ -8,7 +8,7 @@ import {
     getSecheduleById,
     // getAllCourses,
     createStudyPlan,
-    // getStudyPlanById,
+    getStudyPlanById,
     // getPaymentById,
     // getStudentStats,
     // updatePaymentById
@@ -25,7 +25,7 @@ router.post("/logout", logoutStudent);
 router.get("/schedule", getSecheduleById); //id yg di maksud id student bkn id schedule di database
 // router.get("/courses", getAllCourses);
 router.post("/studyplan", createStudyPlan);
-// router.get("/studyplan/:id", getStudyPlanById);
+router.get("/studyplan", getStudyPlanById);
 // router.get("/payment/:id", getPaymentById);
 // router.get("/stats/:id", getStudentStats);
 // router.put("/payment/:id", updatePaymentById);
