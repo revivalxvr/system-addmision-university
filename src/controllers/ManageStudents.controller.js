@@ -455,25 +455,224 @@ export const updatePaymentById = async (req, res) => {
     }
 
     const existing = await prisma.payment.findUnique({
-        where : {
-            id : id
-        }
+      where: {
+        id: id,
+      },
     });
     if (!existing) {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
-    
+
     const payment = await prisma.payment.update({
-        where : {
-            id : id
-        },
-        data : {
-            ...(status !== undefined && {status}),
-        }
-    })
-    return successResponse(res, "berhasil memperbarui data pembayaran", payment);
+      where: {
+        id: id,
+      },
+      data: {
+        ...(status !== undefined && { status }),
+      },
+    });
+    return successResponse(
+      res,
+      "berhasil memperbarui data pembayaran",
+      payment,
+    );
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
 };
 // getStudentStats,
+export const getStudentStats = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    const { id } = tokenCredential;
+    if (tokenCredential.role !== "student") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized student",
+      });
+    }
+    const startOfToday = new Date();
+    // 2. Reset jam, menit, detik, dan milidetik ke angka 0 (Awal Hari)
+    startOfToday.setHours(0, 0, 0, 0);
+    //jalankan query pararel
+    const [student, studyPlans, schedules, upcomingTimeline] =
+      await Promise.all([
+        //1. ambil data student yang login
+        prisma.student.findUnique({
+          where: {
+            id: id,
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            class: {
+              select: {
+                id: true,
+                name: true,
+                major: {
+                  select: {
+                    id: true,
+                    name: true,
+                    faculty: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        }),
+
+        //2. ambil data study plan + courses + attendances
+        prisma.studyPlanCourse.findMany({
+          where: { studyPlan: { studentId: id } },
+          select: {
+            id: true,
+            attendance1: true,
+            attendance2: true,
+            attendance3: true,
+            attendance4: true,
+            attendance5: true,
+            attendance6: true,
+            attendance7: true,
+            attendance8: true,
+            attendance9: true,
+            attendance10: true,
+            attendance11: true,
+            attendance12: true,
+            attendance13: true,
+            attendance14: true,
+            attendance15: true,
+            attendance16: true,
+            course: {
+              select: {
+                id: true,
+                name: true,
+                code: true,
+                credits: true,
+                lecture: {
+                  select: {
+                    name: true,
+                  },
+                },
+              },
+            },
+            studyPlan: {
+              select: {
+                status: true,
+              },
+            },
+          },
+        }),
+
+        //3. ambil data schedule dari semua course yang di ambil student
+        prisma.schedule.findMany({
+          where: {
+            course: {
+              StudyPlans: {
+                some: {
+                  studyPlan: {
+                    studentId: id,
+                  },
+                },
+              },
+            },
+          },
+          select: {
+            id: true,
+            timeStart: true,
+            timeEnd: true,
+            day: true,
+            class: {
+              select: {
+                name: true,
+              },
+            },
+            course: {
+              select: {
+                name: true,
+                code: true,
+                credits: true,
+              },
+            },
+          },
+        }),
+        //4. ambil data timeline
+        prisma.timeLine.findMany({
+          where: {
+            date: {
+              gte: new Date(), //hanya tanggal sekarang
+            },
+          },
+          orderBy: {
+            date: "asc", //urutkan dari yang paling dekat
+          },
+        }),
+      ]);
+
+    //format data study plan
+    const formattedData = studyPlans.map((sp) => ({
+      id: sp.course.id,
+      name: sp.course.name,
+      code: sp.course.code,
+      credits: sp.course.credits,
+      lecture: sp.course.lecture?.name,
+      status: sp.studyPlan.status,
+    }));
+
+    //format data schedule
+    const formattedSchedule = schedules.map((s) => ({
+      id: s.id,
+      courseName: s.course.name,
+      courseCode: s.course.code,
+      courseCredits: s.course.credits,
+      class: s.class.name,
+      day: s.day,
+      timeStart: s.timeStart,
+      timeEnd: s.timeEnd,
+    }));
+
+    //format absen (gabung semua studyPlanCourse menjadi satu array)
+    const allAttendances = studyPlans.flatMap((sp) => [
+      sp.attendance1,
+      sp.attendance2,
+      sp.attendance3,
+      sp.attendance4,
+      sp.attendance5,
+      sp.attendance6,
+      sp.attendance7,
+      sp.attendance8,
+      sp.attendance9,
+      sp.attendance10,
+      sp.attendance11,
+      sp.attendance12,
+      sp.attendance13,
+      sp.attendance14,
+      sp.attendance15,
+      sp.attendance16,
+    ]);
+
+    const absensiStudent = {
+      jumlahHadir: allAttendances.filter((a) => a === "hadir").length,
+      jumlahIzin: allAttendances.filter((a) => a === "izin").length,
+      jumlahSakit: allAttendances.filter((a) => a === "sakit").length,
+      jumlahAlpha: allAttendances.filter((a) => a === "alpha" || a === null)
+        .length,
+    };
+
+    return successResponse(res, "berhasil mendapatkan data", {
+      profile: student,
+      schedules: formattedSchedule,
+      studyPlans: formattedData,
+      absensi: [absensiStudent],
+      upcomingTimeline,
+    });
+  } catch (error) {
+    console.log("=== ERROR ASLI ===", error);
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};

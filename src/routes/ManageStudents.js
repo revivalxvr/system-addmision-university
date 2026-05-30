@@ -10,7 +10,7 @@ import {
     createStudyPlan,
     getStudyPlanById,
     getPaymentById,
-    // getStudentStats,
+    getStudentStats,
     updatePaymentById
 } from "../controllers/ManageStudents.controller.js";
 
@@ -37,6 +37,7 @@ router.get("/studyplan", getStudyPlanById);
 router.get("/payment", getPaymentById); 
 router.put("/payment/:id", updatePaymentById);
 
-// router.get("/stats/:id", getStudentStats);
+//dashboard user
+router.get("/stats", getStudentStats);
 
 export default router;
