@@ -100,7 +100,7 @@ export const createPayment = async (req, res) => {
         status,
       },
     });
-    return successResponse(res, "berhasil mendapatkan data", payment);
+    return successResponse(res, "berhasil membuat payment", payment);
   } catch (error) {
     return errorResponse(res, "gagal mendapatkan data", error.message, 500);
   }

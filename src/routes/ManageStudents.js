@@ -32,8 +32,10 @@ router.post("/studyplan", createStudyPlan);
 
 //id yg di maksud id student bkn id schedule di database
 router.get("/studyplan", getStudyPlanById);
+
+//payment user
 router.get("/payment", getPaymentById); 
-router.put("/payment", updatePaymentById);
+router.put("/payment/:id", updatePaymentById);
 
 // router.get("/stats/:id", getStudentStats);
 

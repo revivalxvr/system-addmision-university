@@ -407,7 +407,7 @@ export const getPaymentById = async (req, res) => {
     }
 
     const { id } = tokenCredential;
-    const payment = await prisma.payment.findUnique({
+    const payment = await prisma.payment.findMany({
       where: {
         student: { id: id },
       },
