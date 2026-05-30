@@ -409,32 +409,71 @@ export const getPaymentById = async (req, res) => {
     const { id } = tokenCredential;
     const payment = await prisma.payment.findUnique({
       where: {
-        student: {id : id},
+        student: { id: id },
       },
       include: {
-          student : {
-            include : {
-                tfGroup : true,
-                class : {
-                    include : {
-                        major : {
-                            include : {
-                                faculty : true
-                            }
-                        }
-                    }
-                }
-            }
-          }
-      }
+        student: {
+          include: {
+            tfGroup: true,
+            class: {
+              include: {
+                major: {
+                  include: {
+                    faculty: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
     if (!payment) {
       return errorResponse(res, "data tidak ditemukan", null, 404);
     }
-    return successResponse(res, "berhasil mendapatkan data pembayaran", payment);
+    return successResponse(
+      res,
+      "berhasil mendapatkan data pembayaran",
+      payment,
+    );
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
+// updatePaymentById
+export const updatePaymentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const tokenCredential = req.user;
+
+    if (tokenCredential.role !== "student") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized student",
+      });
+    }
+
+    const existing = await prisma.payment.findUnique({
+        where : {
+            id : id
+        }
+    });
+    if (!existing) {
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
+    }
+    
+    const payment = await prisma.payment.update({
+        where : {
+            id : id
+        },
+        data : {
+            ...(status !== undefined && {status}),
+        }
+    })
+    return successResponse(res, "berhasil memperbarui data pembayaran", payment);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
 };
 // getStudentStats,
-// updatePaymentById
