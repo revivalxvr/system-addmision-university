@@ -207,53 +207,57 @@ export const getAllCourses = async (req, res) => {
       });
     }
     const student = await prisma.student.findUnique({
-        where :
-        {
-            id : tokenCredential.id
-        }, 
-        include : {
-            class : {
-                include : {
-                    year : true
-                }
-            }
-        }
-    })
-    if(!student) {
-        return errorResponse(res, "data tidak ditemukan", null, 404);
+      where: {
+        id: tokenCredential.id,
+      },
+      include: {
+        class: {
+          include: {
+            year: true,
+          },
+        },
+      },
+    });
+    if (!student) {
+      return errorResponse(res, "data tidak ditemukan", null, 404);
     }
     const courses = await prisma.course.findMany({
-        include : {
-            lecture : {
-                include : {
-                    major : {
-                        include : {
-                            faculty : true
-                        }
-                    }
-                }
-            }
-        }
-    })
+      include: {
+        lecture: {
+          include: {
+            major: {
+              include: {
+                faculty: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
     const formattedData = courses.map((c) => ({
-       studentId : student.id,
-       studentName: student.name,
-       studentNumber: student.studentNumber,
-       year: student.class?.year?.name || null,
-       course : {
-            id: c.id,
-            name: c.name,
-            code: c.code,
-            credits: c.credits,
-            lectureId: c.lectureId,
-            lectureName: c.lecture.name,
-            majorName : c.lecture.major.name,
-            facultyName: c.lecture.major.faculty.name
-       }
-    }))
+      studentId: student.id,
+      studentName: student.name,
+      studentNumber: student.studentNumber,
+      year: student.class?.year?.name || null,
+      course: {
+        id: c.id,
+        name: c.name,
+        code: c.code,
+        credits: c.credits,
+        lectureId: c.lectureId,
+        lectureName: c.lecture.name,
+        majorName: c.lecture.major.name,
+        facultyName: c.lecture.major.faculty.name,
+      },
+    }));
 
-    return successResponse(res, "berhasil mendapatkan data", formattedData, 200);
+    return successResponse(
+      res,
+      "berhasil mendapatkan data",
+      formattedData,
+      200,
+    );
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
@@ -308,12 +312,7 @@ export const createStudyPlan = async (req, res) => {
       };
     });
 
-    return successResponse(
-      res,
-      "berhasil membuat study plan",
-      result,
-      201
-    );
+    return successResponse(res, "berhasil membuat study plan", result, 201);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
@@ -396,5 +395,46 @@ export const getStudyPlanById = async (req, res) => {
   }
 };
 // getPaymentById,
+export const getPaymentById = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+
+    if (tokenCredential.role !== "student") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized student",
+      });
+    }
+
+    const { id } = tokenCredential;
+    const payment = await prisma.payment.findUnique({
+      where: {
+        student: {id : id},
+      },
+      include: {
+          student : {
+            include : {
+                tfGroup : true,
+                class : {
+                    include : {
+                        major : {
+                            include : {
+                                faculty : true
+                            }
+                        }
+                    }
+                }
+            }
+          }
+      }
+    });
+    if (!payment) {
+      return errorResponse(res, "data tidak ditemukan", null, 404);
+    }
+    return successResponse(res, "berhasil mendapatkan data pembayaran", payment);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 // getStudentStats,
 // updatePaymentById

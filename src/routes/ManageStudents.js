@@ -9,9 +9,9 @@ import {
     getAllCourses,
     createStudyPlan,
     getStudyPlanById,
-    // getPaymentById,
+    getPaymentById,
     // getStudentStats,
-    // updatePaymentById
+    updatePaymentById
 } from "../controllers/ManageStudents.controller.js";
 
 const router = express.Router();
@@ -21,13 +21,20 @@ router.post("/register", registerStudent);
 router.post("/login", loginStudent);
 
 router.use(verifyToken); // semua router di bawah ini membutuhkan token
-router.post("/logout", logoutStudent);
+
 router.get("/schedule", getSecheduleById); //id yg di maksud id student bkn id schedule di database
+
+
+router.post("/logout", logoutStudent);
+
 router.get("/courses", getAllCourses);
 router.post("/studyplan", createStudyPlan);
+
+//id yg di maksud id student bkn id schedule di database
 router.get("/studyplan", getStudyPlanById);
-// router.get("/payment/:id", getPaymentById);
+router.get("/payment", getPaymentById); 
+router.put("/payment", updatePaymentById);
+
 // router.get("/stats/:id", getStudentStats);
-// router.put("/payment/:id", updatePaymentById);
 
 export default router;
