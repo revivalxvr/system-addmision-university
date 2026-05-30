@@ -21,11 +21,11 @@ export const getAllPayments = async (req, res) => {
                 year: true,
               },
             },
-            studyPlan: {
-              include: {
-                courses: true,
-              },
-            },
+            // studyPlan: {
+            //   include: {
+            //     courses: true,
+            //   },
+            // },
           },
         },
       },
