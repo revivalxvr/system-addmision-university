@@ -6,9 +6,9 @@ import {
     loginLecture, //login
     logoutLecture, //logout
 
-    // getLectureStats, //dashboard
+    getLectureStats, //dashboard
 
-    // getCoursesByLectureId,
+    getCoursesByLectureId,
     // getStudentByClassId,
     // updatesStudyPlanCourse,
 
@@ -30,8 +30,8 @@ router.post("/login", loginLecture);
 
 
 router.use(verifyToken); // semua router di bawah ini membutuhkan token
-// router.get("/stats", getLectureStats);
-// router.get("/courses", getCoursesByLectureId);
+router.get("/stats", getLectureStats);
+router.get("/courses", getCoursesByLectureId);
 
 // router.get("/courses/:courseId/class/:classId", getStudentByClassId);
 // router.put("/courses/studyplancourse/:id", updatesStudyPlanCourse);
