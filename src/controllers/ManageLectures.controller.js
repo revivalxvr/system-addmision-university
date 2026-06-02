@@ -282,7 +282,7 @@ export const getCoursesByLectureId = async (req, res) => {
       });
     }
     const lecture = await prisma.lecture.findUnique({
-      where: {id},
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -323,44 +323,99 @@ export const getCoursesByLectureId = async (req, res) => {
       },
     });
     if (!lecture) {
-        return errorResponse(res, "lecture tidak ditemukan", null, 404);
+      return errorResponse(res, "lecture tidak ditemukan", null, 404);
     }
 
     //format courses
     const formattedCourses = lecture.course.map((c) => {
-        const courseId = c.schedule.map((s) => s.class.id);
-        const classNameList = c.schedule.map((s) => s.class.name);
-        const semester = c.schedule.flatMap((s) => s.class.student.map((st) => st.semester));
+      const courseId = c.schedule.map((s) => s.class.id);
+      const classNameList = c.schedule.map((s) => s.class.name);
+      const semester = c.schedule.flatMap((s) =>
+        s.class.student.map((st) => st.semester),
+      );
 
-        const uniqueClassIds = [...new Set(courseId)];
-        const uniqueClassNames = [...new Set(classNameList)];
-        const uniqueSemesters = [...new Set(semester)].sort((a, b) => a - b);
-        return {
-            id: c.id,
-            name: c.name,
-            credits: c.credits,
-            classId: uniqueClassIds,
-            classes: uniqueClassNames,
-            semesters: uniqueSemesters,
-        };
-        
-       
+      const uniqueClassIds = [...new Set(courseId)];
+      const uniqueClassNames = [...new Set(classNameList)];
+      const uniqueSemesters = [...new Set(semester)].sort((a, b) => a - b);
+      return {
+        id: c.id,
+        name: c.name,
+        credits: c.credits,
+        classId: uniqueClassIds,
+        classes: uniqueClassNames,
+        semesters: uniqueSemesters,
+      };
     });
     const responseData = {
-        id: lecture.id,
-        name: lecture.name,
-        majorId: lecture.major?.id || null,
-        majorName: lecture.major?.name || null,
-        facultyId: lecture.major?.faculty?.id || null,
-        faculty: lecture.major?.faculty?.name,
-        courses: formattedCourses,
-    }
-    return successResponse(res, "berhasil mengambil data courses", responseData, 200);
+      id: lecture.id,
+      name: lecture.name,
+      majorId: lecture.major?.id || null,
+      majorName: lecture.major?.name || null,
+      facultyId: lecture.major?.faculty?.id || null,
+      faculty: lecture.major?.faculty?.name,
+      courses: formattedCourses,
+    };
+    return successResponse(
+      res,
+      "berhasil mengambil data courses",
+      responseData,
+      200,
+    );
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
 };
 //     getStudentByClassId,
+export const getStudentByClassId = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    if (tokenCredential.role !== "lecture") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const { courseId, classId } = req.params;
+    if(!courseId || !classId) {
+      return errorResponse(res, "courseId dan classId harus diisi", null, 400);
+    }
+    
+    const students = await prisma.student.findMany({
+        where: {
+            classId : classId,
+            studyPlan : {
+                some : {
+                    courses: {
+                        some : {
+                            courseId : courseId,
+                        }
+                    }
+                }
+            }
+        },
+        select : {
+            id : true,
+            name : true,
+            studentNumber : true,
+            studyPlan : {
+                select : {
+                    id : true,
+                    courses :{ 
+                        where : {
+                            courseId : courseId,
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    return successResponse(res, "berhasil mengambil data", students, 200);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 //     updatesStudyPlanCourse,
 
 //     getScheduleByLectureId, //jadwal

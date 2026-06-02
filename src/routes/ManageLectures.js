@@ -9,7 +9,7 @@ import {
     getLectureStats, //dashboard
 
     getCoursesByLectureId,
-    // getStudentByClassId,
+    getStudentByClassId,
     // updatesStudyPlanCourse,
 
     // getScheduleByLectureId, //jadwal
@@ -29,11 +29,14 @@ router.post("/register", createLecture);
 router.post("/login", loginLecture);
 
 
-router.use(verifyToken); // semua router di bawah ini membutuhkan token
+router.use(verifyToken);
+router.get("/courses/:courseId/class/:classId", getStudentByClassId);
+
+
 router.get("/stats", getLectureStats);
 router.get("/courses", getCoursesByLectureId);
 
-// router.get("/courses/:courseId/class/:classId", getStudentByClassId);
+
 // router.put("/courses/studyplancourse/:id", updatesStudyPlanCourse);
 
 
