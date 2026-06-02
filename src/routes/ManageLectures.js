@@ -10,7 +10,7 @@ import {
 
     getCoursesByLectureId,
     getStudentByClassId,
-    // updatesStudyPlanCourse,
+    updatesStudyPlanCourse,
 
     // getScheduleByLectureId, //jadwal
 
@@ -30,14 +30,16 @@ router.post("/login", loginLecture);
 
 
 router.use(verifyToken);
+router.put("/courses/studyplancourse/:id", updatesStudyPlanCourse);
 router.get("/courses/:courseId/class/:classId", getStudentByClassId);
+
 
 
 router.get("/stats", getLectureStats);
 router.get("/courses", getCoursesByLectureId);
 
 
-// router.put("/courses/studyplancourse/:id", updatesStudyPlanCourse);
+
 
 
 // router.put("/studyplan/:id", updateStudyPlanById);

@@ -417,6 +417,34 @@ export const getStudentByClassId = async (req, res) => {
   }
 };
 //     updatesStudyPlanCourse,
+export const updatesStudyPlanCourse = async (req, res) => {
+    try {
+        const tokenCredential = req.user;
+        if (tokenCredential.role !== "lecture") {
+          return res.status(401).json({
+            success: false,
+            message: "Unauthorized",
+          });
+        }
+        const { id } = req.params;
+        const updateData = req.body;
+
+        if (!id) {
+            return errorResponse(res, "id course plan harus diisi", null, 400);
+        }
+
+        // do update
+        const update = await prisma.studyPlanCourse.update({
+            where : {
+                id 
+            },
+            data : updateData,
+        });
+        return successResponse(res, "berhasil mengupdate data", update, 200);
+    } catch (error) {
+        return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    }
+}
 
 //     getScheduleByLectureId, //jadwal
 
