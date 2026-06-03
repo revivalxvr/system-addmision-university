@@ -487,26 +487,26 @@ export const getScheduleByLectureId = async (req, res) => {
         },
       },
     });
-    if(!lecture){
+    if (!lecture) {
       return errorResponse(res, "lecture tidak ditemukan", null, 404);
     }
     const formattedSchedule = lecture.course.flatMap((c) => ({
-        courseId: c.id,
-        courseName: c.name,
-        credits: c.credits,
-        schedules: c.schedule.map((s) => ({
-            id: s.id,
-            classId: s.classId,
-            className: s.class?.name || null,
-            day: s.day,
-            timeStart: s.timeStart,
-            timeEnd: s.timeEnd,
-        })),
+      courseId: c.id,
+      courseName: c.name,
+      credits: c.credits,
+      schedules: c.schedule.map((s) => ({
+        id: s.id,
+        classId: s.classId,
+        className: s.class?.name || null,
+        day: s.day,
+        timeStart: s.timeStart,
+        timeEnd: s.timeEnd,
+      })),
     }));
 
     const responseData = {
-        courses: formattedSchedule,
-    }
+      courses: formattedSchedule,
+    };
     return successResponse(res, "berhasil mengambil data", responseData, 200);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
@@ -514,5 +514,87 @@ export const getScheduleByLectureId = async (req, res) => {
 };
 //     //study plan
 //     getStudyPlanCourseByLectureId,
+export const getStudyPlanCourseByLectureId = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    const { id } = tokenCredential;
+    if (tokenCredential.role !== "lecture") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const studyPlans = await prisma.studyPlanCourse.findMany({
+      where: {
+        course: {
+          lectureId: id,
+        },
+      },
+      select: {
+        course: {
+          include: {
+            lecture: true,
+          },
+        },
+        studyPlan: {
+          include: {
+            student: {
+                include : {
+                    class : {
+                        include : {
+                            year : true
+                        }
+                    }
+                }
+            }
+          }
+        },
+      },
+    });
+    if (!studyPlans.length === 0) {
+      return errorResponse(res, "tidak ada data study plan", null, 404);
+    }
+
+    const margedData = [];
+    studyPlans.forEach((sp) => {
+      let existingCourse = margedData.find(
+        (item) => item.studyPlan.id === sp.studyPlan.id,
+      );
+
+      const courseData = {
+        id: sp.course.id,
+        name: sp.course.name,
+        code: sp.course.code,
+        credits: sp.course.credits,
+        lecture: sp.course.lecture?.name || null,
+      };
+      if (existingCourse) {
+        existingCourse.courses.push(courseData);
+      } else {
+        margedData.push({
+          id: sp.id,
+          scrore: sp.score,
+          createAt: sp.createdAt,
+          updateAt: sp.updatedAt,
+          studyPlan: {
+            id: sp.studyPlan.id,
+            status: sp.studyPlan.status,
+            gpa: sp.studyPlan.gpa,
+            name: sp.studyPlan.student.name,
+            studentNumber: sp.studyPlan.student.studentNumber,
+            yearId: sp.studyPlan.student.class.year.id,
+            yearName: sp.studyPlan.student.class.year.name,
+            createdAt: sp.studyPlan.createdAt,
+            updatedAt: sp.studyPlan.updatedAt,
+          },
+          courses: [courseData],
+        });
+      }
+    });
+    return successResponse(res, "berhasil mengambil data", margedData, 200);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 //     updateStudyPlanById,
 //     updateStudyPlanScoreById,

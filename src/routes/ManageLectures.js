@@ -12,10 +12,10 @@ import {
     getStudentByClassId,
     updatesStudyPlanCourse,
 
-    // getScheduleByLectureId, //jadwal
+    getScheduleByLectureId, //jadwal
 
     // //study plan
-    // getStudyPlanCourseByLectureId,
+    getStudyPlanCourseByLectureId, //KRS
     // updateStudyPlanById,
     // updateStudyPlanScoreById,
 
@@ -30,6 +30,8 @@ router.post("/login", loginLecture);
 
 
 router.use(verifyToken);
+router.get("/studyplans", getStudyPlanCourseByLectureId);
+router.get("/schedule", getScheduleByLectureId);
 router.put("/courses/studyplancourse/:id", updatesStudyPlanCourse);
 router.get("/courses/:courseId/class/:classId", getStudentByClassId);
 
@@ -46,8 +48,8 @@ router.get("/courses", getCoursesByLectureId);
 // router.put("/studyplan/score/:id", updateStudyPlanScoreById);
 
 
-// router.get("/schedule", getScheduleByLectureId);
-// router.get("/studyplan", getStudyPlanCourseByLectureId);
+
+
 
 router.post("/logout", logoutLecture);
 
