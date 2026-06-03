@@ -16,8 +16,8 @@ import {
 
     // //study plan
     getStudyPlanCourseByLectureId, //KRS
-    // updateStudyPlanById,
-    // updateStudyPlanScoreById,
+    updateStudyPlanById,
+    updateStudyPlanScoreById,
 
      
 } from "../controllers/ManageLectures.controller.js";
@@ -30,26 +30,17 @@ router.post("/login", loginLecture);
 
 
 router.use(verifyToken);
+
+router.put("/studyplan/:id", updateStudyPlanById);
+router.put("/studyplan/score/:id", updateStudyPlanScoreById);
+
 router.get("/studyplans", getStudyPlanCourseByLectureId);
 router.get("/schedule", getScheduleByLectureId);
 router.put("/courses/studyplancourse/:id", updatesStudyPlanCourse);
 router.get("/courses/:courseId/class/:classId", getStudentByClassId);
 
-
-
 router.get("/stats", getLectureStats);
 router.get("/courses", getCoursesByLectureId);
-
-
-
-
-
-// router.put("/studyplan/:id", updateStudyPlanById);
-// router.put("/studyplan/score/:id", updateStudyPlanScoreById);
-
-
-
-
 
 router.post("/logout", logoutLecture);
 

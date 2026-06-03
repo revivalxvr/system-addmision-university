@@ -539,15 +539,15 @@ export const getStudyPlanCourseByLectureId = async (req, res) => {
         studyPlan: {
           include: {
             student: {
-                include : {
-                    class : {
-                        include : {
-                            year : true
-                        }
-                    }
-                }
-            }
-          }
+              include: {
+                class: {
+                  include: {
+                    year: true,
+                  },
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -597,4 +597,84 @@ export const getStudyPlanCourseByLectureId = async (req, res) => {
   }
 };
 //     updateStudyPlanById,
+export const updateStudyPlanById = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    const { id } = req.params;
+    const { status, gpa } = req.body;
+    if (tokenCredential.role !== "lecture") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const existing = await prisma.studyPlan.findUnique({
+      where: {
+        id: id,
+      },
+      include: {
+        student: true,
+      },
+    });
+    if (!existing) {
+      return errorResponse(res, "data study plan tidak ditemukan", null, 404);
+    }
+    const update = await prisma.studyPlan.update({
+      where: {
+        id: id,
+      },
+      data: {
+        ...(status !== undefined && { status }),
+        ...(gpa !== undefined && { gpa }),
+      },
+      include: {
+        student: {
+          include: {
+            class: {
+              include: {
+                year: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    return successResponse(res, "berhasil mengupdate data", update, 200);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
 //     updateStudyPlanScoreById,
+export const updateStudyPlanScoreById = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+    const { id } = req.params;
+    const { score } = req.body;
+    if (tokenCredential.role !== "lecture") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+    const existing = await prisma.studyPlanCourse.findUnique({
+      where: {
+        id: id,
+      },
+    });
+    if (!existing) {
+      return errorResponse(res, "data study plan course tidak ditemukan", null, 404);
+    }
+    const update = await prisma.studyPlanCourse.update({
+      where: {
+        id: id,
+      },
+      data: {
+        score,
+      },
+    });
+    return successResponse(res, "berhasil mengupdate data", update, 200);
+  } catch (error) {
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+  }
+};
