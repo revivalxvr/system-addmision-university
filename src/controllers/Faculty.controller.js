@@ -119,6 +119,14 @@ export const deleteFaculty = async (req, res) => {
                  message: "Unauthorized" });
         }
         const { id } = req.params;
+        const existing = await prisma.faculty.findUnique({
+            where: {
+                id
+            },
+        });
+        if(!existing) {
+            return errorResponse(res, "Fakultas tidak ditemukan", null, 404);
+        }
         const faculty = await prisma.faculty.delete({
             where: {
                 id
@@ -126,6 +134,6 @@ export const deleteFaculty = async (req, res) => {
         })
         return successResponse(res, "berhasil menghapus fakultas", faculty);
     } catch (error) {
-        return errorResponse(res, "gagal menghapus fakultas", error.message, 500);
+        return errorResponse(res, "gagal menghapus fakultas", {error:error.message}, 500);
     }    
 };
