@@ -166,6 +166,13 @@ export const deleteYear = async (req, res) => {
     });
     return successResponse(res, "berhasil delete tahun akademik", year);
   } catch (error) {
-    return errorResponse(res, "gagal delete tahun akademik", null, 500);
+      // Jika error berasal dari Prisma Foreign Key
+    if (error.code === "P2003") {
+      return res.status(400).json({
+        code: "P2003",
+        message: "Foreign key constraint failed on the database.",
+      });
+    }
+    res.status(500).json({ message: error.message });
   }
 };
