@@ -142,6 +142,13 @@ export const deleteTfGroup = async (req, res) => {
     });
     return successResponse(res, "berhasil delete data", tfGroup);
   } catch (error) {
-    return errorResponse(res, "gagal delete data", null, 500);
+      // Jika error berasal dari Prisma Foreign Key
+    if (error.code === "P2003") {
+      return res.status(400).json({
+        code: "P2003",
+        message: "Foreign key constraint failed on the database.",
+      });
+    }
+    res.status(500).json({ message: error.message });
   }
 };

@@ -167,6 +167,13 @@ export const deleteLecture = async (req, res) => {
     });
     return successResponse(res, "berhasil menghapus data", lecture);
   } catch (error) {
-    return errorResponse(res, "terjadi kesalahan", null, 500);
+   // Jika error berasal dari Prisma Foreign Key
+    if (error.code === "P2003") {
+      return res.status(400).json({
+        code: "P2003",
+        message: "Foreign key constraint failed on the database.",
+      });
+    }
+    res.status(500).json({ message: error.message });
   }
 };
