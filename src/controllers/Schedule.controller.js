@@ -163,11 +163,7 @@ export const deleteSchedule = async (req, res) => {
     if (!existing) {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
-    await prisma.classSchedule.deleteMany({
-      where: {
-        scheduleId: id,
-      },
-    })
+   
     const schedule = await prisma.schedule.delete({
       where: {
         id,
