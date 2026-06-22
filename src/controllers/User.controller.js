@@ -79,7 +79,7 @@ export const createUser = async (req, res) => {
         }
         const { name, email, password, role } = req.body;
         if (!name || !email || !password || !role) {
-            return errorResponse(res, "data harus diisi", null, 400);
+            return errorResponse(res, "data yang di kirimkan ada yang kosong, data harus diisi", null, 400);
         }
         const existEmail = await prisma.userSiakad.findUnique({
             where : {
