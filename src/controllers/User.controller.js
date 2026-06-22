@@ -118,33 +118,48 @@ export const updateUser = async (req, res) => {
                 message: "Unauthorized",
             });
         }
-        const { name, email, password, roleId } = req.body;
-        if (!name || !email || !password || !roleId) {
-            return errorResponse(res, "data harus diisi", null, 400);
-        }
+
         const { id } = req.params;
-        const existUser = await prisma.user.findUnique({
-            where: {
-                id,
-            },
-        });
-        if (!existUser) {
-            return errorResponse(res, "data tidak ditemukan di database", null, 404);
+        const { name, email, password, role } = req.body;
+
+        // 1. Cek apakah ada minimal satu data yang dikirim untuk diupdate
+        // Jika body kosong total, kembalikan error
+        if (Object.keys(req.body).length === 0) {
+            return errorResponse(res, "Tidak ada data yang dikirim untuk diperbarui", null, 400);
         }
-        const dataToUpdate = {name, email, roleId};
-        if (password) {
+
+        // 2. Pastikan user-nya ada di database sebelum diupdate
+        const existUser = await prisma.userSiakad.findUnique({
+            where: { id },
+        });
+
+        if (!existUser) {
+            return errorResponse(res, "Data tidak ditemukan di database", null, 404);
+        }
+
+        // 3. STRATEGI DINAMIS: Buat objek kosong terlebih dahulu
+        const dataToUpdate = {};
+
+        // 4. Masukkan ke objek HANYA JIKA data tersebut dikirim dan tidak kosong
+        if (name && name.trim() !== "") dataToUpdate.name = name;
+        if (email && email.trim() !== "") dataToUpdate.email = email;
+        if (role && role.trim() !== "") dataToUpdate.role = role;
+
+        // Khusus password, lakukan enkripsi terlebih dahulu jika dikirim
+        if (password && password.trim() !== "") {
             const hashed = await bcrypt.hash(password, 10);
             dataToUpdate.password = hashed;
         }
-        const user = await prisma.user.update({
-            where: {
-                id,
-            },
-            data: dataToUpdate,
+
+        // 5. Eksekusi ke Prisma
+        const user = await prisma.userSiakad.update({
+            where: { id },
+            data: dataToUpdate, // Hanya kolom yang terisi di atas yang akan diupdate
         });
-        return successResponse(res, "berhasil memperbarui data user", user);
+
+        return successResponse(res, "Berhasil memperbarui data user secara dinamis", user);
     } catch (error) {
-         return errorResponse(res, "terjadi kesalahan", error.message, 500);
+         return errorResponse(res, "Terjadi kesalahan", error.message, 500);
     }
 }
 //     deleteUser,
