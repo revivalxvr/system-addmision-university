@@ -80,7 +80,7 @@ export const login = async (req, res) => {
       return errorResponse(res, "email atau password salah", null, 401);
     }
 
-    // 4. Buat token JWT (DIUBAH: Menggunakan 'match', bukan 'user')
+  
     const token = jwt.sign(
       { id: match.id, role: match.role }, 
       JWT_SECRET, 

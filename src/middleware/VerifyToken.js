@@ -1,29 +1,48 @@
+import prisma from '../config/Prisma.js';
 import jsonwebtoken from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
 
-export const verifyToken = (req, res, next) => {
+
+export const verifyToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
    
-    // 1. Ambil nilai token terlebih dahulu dari header
+    // Ambil nilai token terlebih dahulu dari header
     const token = authHeader && authHeader.split(" ")[1];
 
-    // 2. Baru lakukan pengecekan apakah token tersebut ada atau kosong
+    // Baru lakukan pengecekan apakah token tersebut ada atau kosong
     if (!token) {
         return res.status(401).json({ message: "Unauthorized: Token tidak ditemukan" });
     }
 
     try {
-        // 3. Verifikasi token JWT
+        // Verifikasi token JWT
         const decoded = jsonwebtoken.verify(token, JWT_SECRET);
         
-        // 4. Simpan data user hasil decode ke properti req.user
-        req.user = decoded;
+        // Cek apakah data user ini masih ada di database
+        const userAktif = await prisma.userSiakad.findUnique({
+            where: { id: decoded.id } // Pastikan nama field ID sesuai (misal string atau number)
+        });
+
+        // Jika user ternyata sudah dihapus oleh Admin lain dari DB
+        if (!userAktif) {
+            // hapus juga cookie-nya dari sini
+            res.clearCookie("token");
+            res.clearCookie("email");
+            res.clearCookie("userId");
+
+            return res.status(401).json({ 
+                message: "Unauthorized: Akun Anda telah dihapus oleh Admin. Sesi dikeluarkan." 
+            });
+        }
+
+        // Simpan data user asli dari database ke properti req.user (lebih aman daripada data decode JWT saja)
+        req.user = userAktif;
         
-        // 5. Lolos, lanjut ke controller utama
+        // Lolos, lanjut ke controller utama
         next();
     } catch (error) {
-        // Jika token palsu atau sudah kedaluwarsa
-        return res.status(401).json({ message: "Unauthorized: Token tidak valid" });
+        // Jika token palsu, sudah kedaluwarsa, atau terjadi error DB
+        return res.status(401).json({ message: "Unauthorized: Token tidak valid atau sesi berakhir" });
     }
 };
