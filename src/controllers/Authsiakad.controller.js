@@ -71,7 +71,7 @@ export const login = async (req, res) => {
 
     // Jika user tidak ditemukan
     if (!match) {
-      return errorResponse(res, "email atau password salah", null, 401);
+      return errorResponse(res, "email tidak terdaftar di database", null, 401);
     }
 
     // 3. Validasi password menggunakan bcrypt
