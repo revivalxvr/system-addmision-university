@@ -124,8 +124,8 @@ export const updatePayment = async (req, res) => {
     if (!existing) {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
-    const { studentId, code, status } = req.body;
-    if (!studentId || !code || !status) {
+    const {  status } = req.body;
+    if ( !status) {
       return errorResponse(res, "data harus diisi", null, 401);
     }
     const payment = await prisma.payment.update({
@@ -133,14 +133,12 @@ export const updatePayment = async (req, res) => {
         id,
       },
       data: {
-        studentId,
-        code,
         status,
       },
     });
-    return successResponse(res, "berhasil mendapatkan data", payment);
+    return successResponse(res, "berhasil mengupdate data", payment);
   } catch (error) {
-    return errorResponse(res, "gagal mendapatkan data", error.message, 500);
+    return errorResponse(res, "gagal mengupdate data", error.message, 500);
   }
 };
 //     deletePayment,
