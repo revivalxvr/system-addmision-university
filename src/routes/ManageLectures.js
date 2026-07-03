@@ -31,12 +31,12 @@ router.post("/login", loginLecture);
 
 router.use(verifyToken);
 
-router.put("/studyplan/:id", updateStudyPlanById);
-router.put("/studyplan/score/:id", updateStudyPlanScoreById);
+router.put("/studyplans/:id", updateStudyPlanById);
+router.put("/studyplans/score/:id", updateStudyPlanScoreById);
 
 router.get("/studyplans", getStudyPlanCourseByLectureId);
 router.get("/schedule", getScheduleByLectureId);
-router.put("/courses/studyplancourse/:id", updatesStudyPlanCourse);
+router.put("/courses/studyplans/:id", updatesStudyPlanCourse);
 router.get("/courses/:courseId/class/:classId", getStudentByClassId);
 
 router.get("/stats", getLectureStats);
