@@ -640,6 +640,9 @@ export const updateStudyPlanById = async (req, res) => {
         },
       },
     });
+    if (update.student && update.student.password) {
+      delete update.student.password;
+    }
     return successResponse(res, "berhasil mengupdate data", update, 200);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
