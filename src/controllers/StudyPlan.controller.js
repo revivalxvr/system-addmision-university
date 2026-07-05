@@ -11,8 +11,17 @@ export const getAllStudyPlans = async (req, res) => {
         message: "Unauthorized",
       });
     }
+
+    // 1. Ambil data dengan struktur nested select/include yang baru
     const studyPlans = await prisma.studyPlan.findMany({
       include: {
+        // Mengambil data Tahun Akademik Lembar KRS
+        year: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         student: {
           select: {
             id: true,
@@ -37,22 +46,31 @@ export const getAllStudyPlans = async (req, res) => {
             score: true,
             studyPlanId: true,
             courseId: true,
+            // Ambil info mata kuliah langsung
             course: {
+              select: {
+                name: true,
+                code: true,
+                credits: true
+              }
+            },
+            // Ambil info schedule beserta lecture di dalamnya (menggunakan include bertingkat)
+            schedule: {
               include: {
                 lecture: {
                   select: {
                     id: true,
                     name: true,
-                    lectureNumber: true,
-                  },
-                },
-              },
-            },
+                  }
+                }
+              }
+            }
           },
         },
       },
     });
 
+    // 2. Format ulang data agar rapi saat diterima Frontend
     const formattedStudyPlans = studyPlans.map((studyPlan) => ({
       id: studyPlan.id,
       studentId: studyPlan.studentId,
@@ -61,27 +79,35 @@ export const getAllStudyPlans = async (req, res) => {
       createdAt: studyPlan.createdAt,
       updatedAt: studyPlan.updatedAt,
 
-      // Student data (Gunakan koma, bukan titik koma)
+      // Data Tahun Akademik Lembar KRS
+      academicYearId: studyPlan.year?.id ?? null,
+      academicYearName: studyPlan.year?.name ?? null,
+
+      // Student data
       studentName: studyPlan.student?.name ?? null,
       studentNumber: studyPlan.student?.studentNumber ?? null,
       studentYearId: studyPlan.student?.class?.year?.id ?? null,
       studentSemester: studyPlan.student?.semester ?? null,
       studentYearName: studyPlan.student?.class?.year?.name ?? null,
 
-      // Perbaikan Map Kedua: Harus return object juga
+      // Mapping data list mata kuliah pilihan mahasiswa
       courses: studyPlan.courses.map((c) => ({
         id: c.id,
         courseId: c.courseId,
         studyPlanId: c.studyPlanId,
-        courseName: c.course?.name ?? null, // Gunakan opsi ? untuk jaga-jaga jika data null
+        courseName: c.course?.name ?? null, 
         courseCode: c.course?.code ?? null,
         courseScore: c.score,
         credits: c.course?.credits ?? null,
-        lectureId: c.course?.lecture?.id ?? null,
-        lectureName: c.course?.lecture?.name ?? null,
-        lectureNumber: c.course?.lecture?.lectureNumber ?? null,
-      })), // Tutup map course
-    })); // Tutup map studyPlan
+        
+        // AMAN DARI NULL: Mengambil info jadwal & dosen jika kelak sudah di-plotting admin
+        scheduleId: c.scheduleId ?? null,
+        room: c.schedule?.room ?? null,
+        day: c.schedule?.day ?? null,
+        lectureId: c.schedule?.lecture?.id ?? null,
+        lectureName: c.schedule?.lecture?.name ?? null,
+      })), 
+    })); 
 
     return successResponse(
       res,
@@ -91,7 +117,7 @@ export const getAllStudyPlans = async (req, res) => {
     );
   } catch (error) {
     console.log("=== ERROR ASLI ===", error);
-    return errorResponse(res, "terjadi kesalahan", null, 500);
+    return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
 };
 // getStudyPlanById,
@@ -107,10 +133,17 @@ export const getStudyPlanById = async (req, res) => {
 
     const { id } = req.params;
     
-    // 1. Ambil data tunggal dari database
+    // 1. Ambil data tunggal dengan struktur include/select terbaru
     const studyPlan = await prisma.studyPlan.findUnique({
       where: { id },
       include: {
+        // 🚀 Sertakan Tahun Akademik lembar KRS
+        year: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         student: {
           select: {
             id: true,
@@ -120,7 +153,7 @@ export const getStudyPlanById = async (req, res) => {
             class: {
               select: {
                 year: {
-                  select: { //  PERBAIKAN: Tambahkan select yang kurang di sini
+                  select: { 
                     id: true,
                     name: true,
                   }
@@ -135,17 +168,25 @@ export const getStudyPlanById = async (req, res) => {
             score: true,
             studyPlanId: true,
             courseId: true,
+            // Ambil info mata kuliah langsung
             course: {
+              select: {
+                name: true,
+                code: true,
+                credits: true
+              }
+            },
+            // 🚀 Ambil info schedule beserta lecture di dalamnya
+            schedule: {
               include: {
                 lecture: {
                   select: {
                     id: true,
                     name: true,
-                    lectureNumber: true,
-                  },
-                },
-              },
-            },
+                  }
+                }
+              }
+            }
           },
         },
       },
@@ -156,7 +197,7 @@ export const getStudyPlanById = async (req, res) => {
       return errorResponse(res, "study plan tidak ditemukan", null, 404);
     }
 
-    // 3. FORMAT DATA: Langsung buat objek baru, TIDAK PERLU .map() karena bukan array
+    // 3. FORMAT DATA: Sesuaikan objek pemetaan data tunggal
     const formattedStudyPlan = {
       id: studyPlan.id,
       studentId: studyPlan.studentId,
@@ -165,6 +206,10 @@ export const getStudyPlanById = async (req, res) => {
       createdAt: studyPlan.createdAt,
       updatedAt: studyPlan.updatedAt,
 
+      // 🚀 Data Tahun Akademik Lembar KRS
+      academicYearId: studyPlan.year?.id ?? null,
+      academicYearName: studyPlan.year?.name ?? null,
+
       // Data Mahasiswa
       studentName: studyPlan.student?.name ?? null,
       studentNumber: studyPlan.student?.studentNumber ?? null,
@@ -172,7 +217,7 @@ export const getStudyPlanById = async (req, res) => {
       studentYearId: studyPlan.student?.class?.year?.id ?? null,
       studentYearName: studyPlan.student?.class?.year?.name ?? null,
 
-      // Data Courses (Gunakan .map() di sini karena courses di dalam studyPlan berbentuk Array)
+      // Data Courses (Gunakan .map() di sini karena berbentuk Array)
       courses: studyPlan.courses.map((c) => ({
         id: c.id,
         courseId: c.courseId,
@@ -181,13 +226,17 @@ export const getStudyPlanById = async (req, res) => {
         courseCode: c.course?.code ?? null,
         courseScore: c.score,
         credits: c.course?.credits ?? null,
-        lectureId: c.course?.lecture?.id ?? null,
-        lectureName: c.course?.lecture?.name ?? null,
-        lectureNumber: c.course?.lecture?.lectureNumber ?? null,
+        
+        // Mengambil info jadwal & dosen lewat relasi schedule secara aman
+        scheduleId: c.scheduleId ?? null,
+        room: c.schedule?.room ?? null,
+        day: c.schedule?.day ?? null,
+        lectureId: c.schedule?.lecture?.id ?? null,
+        lectureName: c.schedule?.lecture?.name ?? null,
       })),
     };
 
-    // 4. Kirim data yang sudah di-format (formattedStudyPlan)
+    // 4. Kirim data yang sudah di-format
     return successResponse(
       res,
       "berhasil mendapatkan study plan",
@@ -195,7 +244,6 @@ export const getStudyPlanById = async (req, res) => {
       200,
     );
   } catch (error) {
-    // Membantu Anda melihat log asli di terminal console backend jika ada error lain
     console.error("Error GetById: ", error.message); 
     return errorResponse(res, "gagal mendapatkan study plan by id", error.message, 500);
   }
@@ -210,51 +258,57 @@ export const createStudyPlan = async (req, res) => {
         message: "Unauthorized",
       });
     }
-    const { courseId, ...rest } = req.body;
-    if (!rest.status && (rest.gpa === undefined || rest.gpa === null)) {
-      return errorResponse(res, "data harus diisi", null, 400);
+
+    // 🚀 Ambil 'courseId' kembali, bukan scheduleId
+    const { studentId, yearId, status, gpa, courseId } = req.body;
+
+    if (!studentId || !yearId || !status) {
+      return errorResponse(res, "studentId, yearId, dan status wajib diisi!", null, 400);
     }
 
+    // Ekstrak string UUID courseId dari Postman (misal: "uuidMatkulA, uuidMatkulB")
     const courseIds = courseId
       ? courseId
           .split(",")
           .map((id) => id.trim())
           .filter((id) => id !== "")
       : [];
+
     if (courseIds.length === 0) {
-      return errorResponse(res, "data harus diisi", null, 400);
+      return errorResponse(res, "Pilih minimal satu mata kuliah (courseId)!", null, 400);
     }
 
-    // Bungkus proses create ke dalam Prisma $transaction
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Buat study plan (Gunakan 'tx', bukan 'prisma')
+      
+      // 1. Buat lembar data induk KRS
       const studyPlan = await tx.studyPlan.create({
         data: {
-          ...rest,
-          gpa: rest.gpa ? Number(rest.gpa) : null,
+          studentId: studentId,
+          yearId: yearId,
+          status: status,
+          gpa: gpa ? parseInt(gpa) : null,
         },
       });
 
-      // 2. Siapkan data study plan courses
+      // 2. Petakan ke tabel penghubung menggunakan 'courseId'
+      // Kolom 'scheduleId' otomatis akan bernilai NULL di database (menunggu di-plot nanti)
       const studyPlanCourses = courseIds.map((id) => ({
         studyPlanId: studyPlan.id,
-        courseId: id,
+        courseId: id, 
       }));
 
-      // 3. Insert ke database (Gunakan 'tx', bukan 'prisma')
+      // Mass-insert ke tabel relasi StudyPlanCourse
       await tx.studyPlanCourse.createMany({
         data: studyPlanCourses,
       });
 
-      // Kembalikan data gabungan jika semuanya sukses
       return {
         ...studyPlan,
         courses: studyPlanCourses,
       };
     });
 
-    // Jika kode sampai di sini, artinya langkah 1 dan 3 BERHASIL SEPERTI SATU KESATUAN
-    return successResponse(res, "berhasil membuat study plan", result, 200);
+    return successResponse(res, "berhasil membuat KRS ", result, 200);
   } catch (error) {
     return errorResponse(res, "gagal membuat study plans", error.message, 500);
   }
@@ -272,75 +326,83 @@ export const updateStudyPlan = async (req, res) => {
 
     const { id } = req.params;
 
-    // Cek apakah data study plan ada di database
-    const existId = await prisma.studyPlan.findUnique({
+    // 1. Cari data lama di database (Menjadi acuan fallback jika data tidak dikirim frontend)
+    const existing = await prisma.studyPlan.findUnique({
       where: { id },
     });
-    if (!existId) {
-      return errorResponse(res, "data tidak ditemukan di database", null, 404);
-    }
-
-    const { courseId, ...rest } = req.body;
     
-    // PERBAIKAN 1: Ganti res.gpa menjadi rest.gpa
-    if (!rest.status && (rest.gpa === undefined || rest.gpa === null)) {
-      return errorResponse(res, "data harus diisi", null, 400);
+    if (!existing) {
+      return errorResponse(res, "Data study plan tidak ditemukan", null, 404);
     }
 
-    const courseIds = courseId
-      ? courseId
-          .split(",")
-          .map((id) => id.trim())
-          .filter((id) => id !== "")
-      : [];
+    // 2. Ambil parameter body secara transparan
+    const { studentId, yearId, status, gpa, courseId } = req.body;
 
-    if (courseIds.length === 0) {
-      return errorResponse(res, "data harus diisi", null, 400);
-    }
-
-    // PERBAIKAN 2: Bungkus semua proses manipulasi data ke dalam $transaction agar aman
+    // 3. Jalankan Prisma atomik transaksi
     const result = await prisma.$transaction(async (tx) => {
       
-      // 1. Update data utama StudyPlan
+      // A. UPDATE DATA INDUK (STUDYPLAN) SECARA PARSIAL
       const updatedStudyPlan = await tx.studyPlan.update({
         where: { id },
         data: {
-          ...rest,
-          gpa: rest.gpa ? Number(rest.gpa) : null,
+          studentId: studentId !== undefined ? studentId : existing.studentId,
+          yearId: yearId !== undefined ? yearId : existing.yearId,
+          status: status !== undefined ? status : existing.status,
+          gpa: gpa !== undefined ? (gpa ? parseInt(gpa) : null) : existing.gpa,
         },
       });
 
-      // 2. PERBAIKAN 3: Hapus data relasi course lama BERDASARKAN studyPlanId
-      await tx.studyPlanCourse.deleteMany({
-        where: {
-          studyPlanId: id, // Menggunakan foreign key, bukan id primary key anak
-        },
-      });
+      // B. PROSES PEMBARUAN DAFTAR MATA KULIAH (HANYA JIKA 'courseId' DIKIRIM OLEH FRONTEND)
+      let finalCourses = [];
 
-      // 3. PERBAIKAN 4: Format ulang mapping array dengan tanda ( ) agar menghasilkan objek valid
-      const studyPlanCourses = courseIds.map((cId) => ({
-        studyPlanId: updatedStudyPlan.id,
-        courseId: cId,
-      }));
+      if (courseId !== undefined) {
+        // Ekstrak string UUID jika ada kiriman baru dari frontend
+        const courseIds = courseId
+          ? courseId
+              .split(",")
+              .map((cId) => cId.trim())
+              .filter((cId) => cId !== "")
+          : [];
 
-      // 4. Masukkan daftar mata kuliah baru ke database
-      await tx.studyPlanCourse.createMany({
-        data: studyPlanCourses,
-      });
+        if (courseIds.length === 0) {
+          throw new Error("Pemberian courseId baru tidak boleh kosong!");
+        }
+
+        // Hapus daftar mata kuliah lama di KRS ini
+        await tx.studyPlanCourse.deleteMany({
+          where: { studyPlanId: id },
+        });
+
+        // Petakan ke objek data penghubung baru
+        const studyPlanCourses = courseIds.map((cId) => ({
+          studyPlanId: id,
+          courseId: cId,
+        }));
+
+        // Simpan massal mata kuliah baru
+        await tx.studyPlanCourse.createMany({
+          data: studyPlanCourses,
+        });
+
+        finalCourses = studyPlanCourses;
+      } else {
+        // KONDISI JIKA FRONTEND TIDAK MENGIRIM 'courseId': Ambil data mata kuliah yang sudah ada di DB
+        finalCourses = await tx.studyPlanCourse.findMany({
+          where: { studyPlanId: id },
+          select: {
+            studyPlanId: true,
+            courseId: true,
+          }
+        });
+      }
 
       return {
         ...updatedStudyPlan,
-        courses: studyPlanCourses,
+        courses: finalCourses,
       };
     });
 
-    // Kirim response sukses jika transaksi aman
-    return successResponse(
-      res,
-      "berhasil update study plan",
-      result,
-      200,
-    );
+    return successResponse(res, "berhasil update study plan secara parsial", result, 200);
 
   } catch (error) {
     console.error("Error Update Study Plan: ", error.message);
@@ -357,29 +419,46 @@ export const deleteStudyPlan = async (req, res) => {
         message: "Unauthorized",
       });
     }
+
     const { id } = req.params;
-    const existId = await prisma.studyPlan.findUnique({
+
+    // 1. Cek apakah data KRS tersebut memang ada di database
+    const existing = await prisma.studyPlan.findUnique({
       where: { id },
-      include: { courses: true }, // cek relasi ke study plan course
     });
-    if (!existId) {
-      return errorResponse(res, "data tidak ditemukan di database", null, 404);
+
+    if (!existing) {
+      return errorResponse(res, "Data study plan tidak ditemukan di database", null, 404);
     }
 
-    // 1. Hapus semua data anak di tabel studyPlanCourse terlebih dahulu
-    await prisma.studyPlanCourse.deleteMany({
-      where: {
-        studyPlanId: id, // Hapus yang terikat dengan ID study plan ini
-      },
+    // 2. Jalankan proses hapus berantai menggunakan $transaction
+    await prisma.$transaction(async (tx) => {
+      
+      // Langkah A: Hapus semua data mata kuliah yang terikat dengan Study Plan ini
+      await tx.studyPlanCourse.deleteMany({
+        where: {
+          studyPlanId: id,
+        },
+      });
+
+      // Langkah B: Hapus data induk Lembar KRS
+      await tx.studyPlan.delete({
+        where: {
+          id: id,
+        },
+      });
     });
-    // 2. Setelah data anak bersih, baru hapus data induknya
-    await prisma.studyPlan.delete({
-      where: {
-        id: id,
-      },
-    });
-    return successResponse(res, "berhasil menghapus data", { deleteId: id });
+
+    // 3. Kembalikan response sukses jika transaksi aman
+    return successResponse(
+      res,
+      `Berhasil menghapus study plan dengan ID: ${id} beserta seluruh daftar mata kuliah di dalamnya`,
+      null,
+      200
+    );
+
   } catch (error) {
-    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    console.error("Error Delete Study Plan: ", error.message);
+    return errorResponse(res, "Terjadi kesalahan saat menghapus data", error.message, 500);
   }
 };

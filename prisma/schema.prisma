@@ -69,6 +69,7 @@ model AcademyYear {
   dateEnd   DateTime
   status    Boolean
   class     Class[]
+  studyPlans StudyPlan[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -107,18 +108,18 @@ model Student {
 }
 
 model Lecture {
-  id            String   @id @default(uuid())
+  id            String     @id @default(uuid())
   name          String
   email         String
   password      String?
-  role          String   @default("lecture")
+  role          String     @default("lecture")
   lectureNumber Int
   position      String
   majorId       String
-  major         Major    @relation(fields: [majorId], references: [id])
-  course        Course[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  major         Major      @relation(fields: [majorId], references: [id])
+  schedule      Schedule[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model Course {
@@ -127,10 +128,9 @@ model Course {
   code      String
   credits   Int
   schedule  Schedule[]
+  studyPlanCourses StudyPlanCourse[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
-  Lecture   Lecture?   @relation(fields: [lectureId], references: [id])
-  lectureId String?
 }
 
 model Schedule {
@@ -143,6 +143,8 @@ model Schedule {
   classId          String // Menghubungkan jadwal ini dengan kelompok Pagi atau Sore
   class            Class             @relation(fields: [classId], references: [id])
   courseId         String
+  lectureId        String
+  lecture          Lecture           @relation(fields: [lectureId], references: [id])
   course           Course            @relation(fields: [courseId], references: [id])
   studyPlanCourses StudyPlanCourse[]
   createdAt        DateTime          @default(now())
@@ -161,6 +163,8 @@ model Payment {
 
 model StudyPlan {
   id        String            @id @default(uuid())
+  yearId    String
+  year      AcademyYear      @relation(fields: [yearId], references: [id])
   studentId String
   student   Student           @relation(fields: [studentId], references: [id])
   courses   StudyPlanCourse[]
@@ -175,8 +179,10 @@ model StudyPlanCourse {
   score       Int?
   studyPlanId String
   studyPlan   StudyPlan @relation(fields: [studyPlanId], references: [id])
-  scheduleId  String // Mengunci ke Jadwal & Ruangan spesifik hasil plotting otomatis
-  schedule    Schedule  @relation(fields: [scheduleId], references: [id])
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id])
+  scheduleId  String?   // Tanda tanya (?) artinya boleh Kosong / Null dulu
+  schedule    Schedule? @relation(fields: [scheduleId], references: [id])
 
   // Nilai Absensi 1-16
   attendance1  String?

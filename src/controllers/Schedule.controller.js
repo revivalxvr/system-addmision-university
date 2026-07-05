@@ -14,18 +14,41 @@ export const getAllSchedules = async (req, res) => {
     const schedules = await prisma.schedule.findMany({
       include: {
         class: {
-          include: {
-            year: true,
+          select: {
+            id: true,
+            name: true,
+            year: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
             major: {
-              include: {
-                faculty: true,
+              select: {
+                id: true,
+                name: true,
+                faculty: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
         },
         course: {
-          include: {
-            lecture: true,
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            credits: true,
+          },
+        },
+        lecture: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
@@ -86,20 +109,85 @@ export const createSchedule = async (req, res) => {
         message: "Unauthorized",
       });
     }
-    const { timeStart, timeEnd, day, classId, courseId } = req.body;
-    if (!timeStart || !timeEnd || !day || !classId || !courseId) {
-      return errorResponse(res, "data harus diisi", null, 400);
+    const {
+      day,
+      timeStart,
+      timeEnd,
+      room,
+      capacity,
+      classId,
+      courseId,
+      lectureId,
+    } = req.body;
+
+    // 1. Validasi Input Dasar
+    if (!day || !timeStart || !timeEnd || !room || !classId || !courseId || !lectureId) {
+      return res.status(400).json({
+        success: false,
+        message: "Semua kolom wajib diisi!",
+      });
     }
-    const schedule = await prisma.schedule.create({
-      data: {
-        timeStart,
-        timeEnd,
-        day,
-        classId,
-        courseId,
+
+    const startIso = new Date(timeStart);
+    const endIso = new Date(timeEnd);
+
+    // 2. Validasi Bentrok Ruangan (Menggunakan Rumus Overlap yang Akurat)
+    const isRoomBusy = await prisma.schedule.findFirst({
+      where: {
+        day: day,
+        room: room,
+        timeStart: { lt: endIso }, // Start kuliah di DB < End kuliah baru
+        timeEnd: { gt: startIso },  // End kuliah di DB > Start kuliah baru
       },
     });
-    return successResponse(res, "berhasil membuat data", schedule);
+
+    if (isRoomBusy) {
+      return res.status(400).json({
+        success: false,
+        message: `Gagal! Ruangan ${room} sudah digunakan untuk kuliah lain pada hari dan jam tersebut.`,
+      });
+    }
+
+    // 3. Validasi Bentrok Dosen (Mencegah Dosen Memiliki 2 Kelas Bersamaan)
+    const isLectureBusy = await prisma.schedule.findFirst({
+      where: {
+        day: day,
+        lectureId: lectureId,
+        timeStart: { lt: endIso },
+        timeEnd: { gt: startIso },
+      },
+      include: {
+        course: { select: { name: true } }
+      }
+    });
+
+    if (isLectureBusy) {
+      return res.status(400).json({
+        success: false,
+        message: `Gagal! Dosen tersebut sudah memiliki jadwal mengajar matkul "${isLectureBusy.course.name}" pada hari dan jam tersebut.`,
+      });
+    }
+
+    // 4. Proses Simpan Data 
+    const newSchedule = await prisma.schedule.create({
+      data: {
+        day,
+        timeStart: startIso,
+        timeEnd: endIso,
+        room,
+        capacity: capacity ? parseInt(capacity) : 35,
+        class: { connect: { id: classId } },
+        course: { connect: { id: courseId } },
+        lecture: { connect: { id: lectureId } },
+      },
+      include: {
+        class: { select: { name: true } },
+        course: { select: { name: true, code: true } },
+        lecture: { select: { name: true } },
+      },
+    });
+
+    return successResponse(res, "berhasil menambahkan data", newSchedule);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
@@ -123,22 +211,30 @@ export const updateSchedule = async (req, res) => {
     if (!existing) {
       return errorResponse(res, "data tidak ditemukan", null, 404);
     }
-    const { timeStart, timeEnd, day, classId, courseId } = req.body;
-    if (!timeStart || !timeEnd || !day || !classId || !courseId) {
-      return errorResponse(res, "data harus diisi", null, 400);
-    }
+    const {
+      day,
+      timeStart,
+      timeEnd,
+      room,
+      capacity,
+      classId,
+      courseId,
+      lectureId,
+    } = req.body;
+
     const schedule = await prisma.schedule.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
-        timeStart,
-        timeEnd,
-        day,
-        classId,
-        courseId,
-      },
-    });
+        day : day !== undefined ? day : existing.day,
+        timeStart: timeStart !== undefined ? new Date(timeStart) : existing.timeStart,
+        timeEnd: timeEnd !== undefined ? new Date(timeEnd) : existing.timeEnd,
+        room: room !== undefined ? room : existing.room,
+        capacity: capacity !== undefined ? parseInt(capacity) : existing.capacity,
+        classId: classId !== undefined ? classId : existing.classId,
+        courseId: courseId !== undefined ? courseId : existing.courseId,
+        lectureId: lectureId !== undefined ? lectureId : existing.lectureId,
+      }
+    })
     return successResponse(res, "berhasil memperbarui data", schedule);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
@@ -163,13 +259,13 @@ export const deleteSchedule = async (req, res) => {
     if (!existing) {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
-   
+
     const schedule = await prisma.schedule.delete({
       where: {
         id,
       },
     });
-   
+
     return successResponse(res, "berhasil menghapus data", schedule);
   } catch (error) {
     return errorResponse(res, "terjadi kesalahan", error.message, 500);

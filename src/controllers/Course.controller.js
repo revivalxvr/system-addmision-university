@@ -15,20 +15,16 @@ export const getAllCourses = async (req, res) => {
     }
     const courses = await prisma.course.findMany({
       include: {
-        lecture: {
+        schedule: {
           include: {
-            major: {
-              include: {
-                faculty: true,
-              },
-            },
+            class: true, 
+            lecture: true, 
           },
         },
       },
     });
     return successResponse(res, "berhasil mendapatkan data", courses);
   } catch (error) {
-    console.log("=== ERROR ASLI ===", error);
     return errorResponse(res, "terjadi kesalahan", error.message, 500);
   }
 };
@@ -83,8 +79,8 @@ export const createCourse = async (req, res) => {
         message: "Unauthorized",
       });
     }
-    const { name, code, lectureId, credits } = req.body;
-    if (!name || !code || !lectureId || !credits) {
+    const { name, code, credits } = req.body;
+    if (!name || !code || !credits) {
       return errorResponse(res, "data harus diisi", null, 400);
     }
 
@@ -92,7 +88,6 @@ export const createCourse = async (req, res) => {
       data: {
         name,
         code,
-        lectureId,
         credits: Number(credits),
       },
     });
@@ -121,19 +116,17 @@ export const updateCourse = async (req, res) => {
     if (!existCourse) {
       return errorResponse(res, "data tidak ditemukan", null, 404);
     }
-    const { name, code, lectureId, credits } = req.body;
-    if (!name || !code || !lectureId || !credits) {
-      return errorResponse(res, "data harus diisi", null, 400);
-    }
+    const { name, code,  credits } = req.body;
+   
     const course = await prisma.course.update({
-      where: {
-        id,
-      },
+     where: { id },
       data: {
-        name,
-        code,
-        lectureId,
-        credits: Number(credits),
+        // Jika 'name' ada di req.body maka diupdate, jika tidak ada (undefined) otomatis pakai data lama
+        name: name !== undefined ? name : undefined,
+        code: code !== undefined ? code : undefined,
+        
+        // Khusus untuk 'credits' bertipe Int/Number, pastikan dikonversi hanya jika datanya dikirim
+        credits: credits !== undefined ? Number(credits) : undefined,
       },
     });
 
