@@ -27,7 +27,7 @@ export const getAllStudyPlans = async (req, res) => {
             id: true,
             name: true,
             studentNumber: true,
-            semester: true,
+         
             class: {
               select: {
                 year: {
@@ -87,7 +87,7 @@ export const getAllStudyPlans = async (req, res) => {
       studentName: studyPlan.student?.name ?? null,
       studentNumber: studyPlan.student?.studentNumber ?? null,
       studentYearId: studyPlan.student?.class?.year?.id ?? null,
-      studentSemester: studyPlan.student?.semester ?? null,
+     
       studentYearName: studyPlan.student?.class?.year?.name ?? null,
 
       // Mapping data list mata kuliah pilihan mahasiswa
@@ -149,7 +149,7 @@ export const getStudyPlanById = async (req, res) => {
             id: true,
             name: true,
             studentNumber: true,
-            semester: true,
+           
             class: {
               select: {
                 year: {
@@ -213,7 +213,7 @@ export const getStudyPlanById = async (req, res) => {
       // Data Mahasiswa
       studentName: studyPlan.student?.name ?? null,
       studentNumber: studyPlan.student?.studentNumber ?? null,
-      studentSemester: studyPlan.student?.semester ?? null,
+  
       studentYearId: studyPlan.student?.class?.year?.id ?? null,
       studentYearName: studyPlan.student?.class?.year?.name ?? null,
 
