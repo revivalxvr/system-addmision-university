@@ -94,7 +94,6 @@ model Student {
   password      String?
   role          String       @default("student")
   studentNumber String       @unique // NIM
-  semester      Int
   classOf       Int
   tfGroupId     String
   tfGroup       TfGroup      @relation(fields: [tfGroupId], references: [id])

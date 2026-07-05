@@ -98,9 +98,9 @@ export const createStudent = async (req, res) => {
         message: "Unauthorized",
       });
     }
-    const { name, email, semester, classOf, tfGroupId, classId } = req.body;
+    const { name, email, classOf, tfGroupId, classId } = req.body;
 
-    if (!name || !email || !semester || !classOf || !tfGroupId || !classId) {
+    if (!name || !email  || !classOf || !tfGroupId || !classId) {
       return errorResponse(res, "data mahasiswa harus diisi", null, 401);
     }
 
@@ -131,7 +131,6 @@ export const createStudent = async (req, res) => {
         studentNumber,
         name,
         email,
-        semester: Number(semester),
         classOf: Number(classOf),
         tfGroupId,
         classId,
@@ -161,14 +160,13 @@ export const updateStudent = async (req, res) => {
     const {
       name,
       email,
-      semester,
       classOf,
       tfGroupId,
       classId,
       studentNumber,
     } = req.body;
 
-    if (!name || !email || !semester || !classOf || !tfGroupId || !classId) {
+    if (!name || !email || !classOf || !tfGroupId || !classId) {
       return errorResponse(res, "data mahasiswa harus diisi", null, 401);
     }
 
@@ -181,27 +179,16 @@ export const updateStudent = async (req, res) => {
     if (!existing) {
       return errorResponse(res, "data tidak ditemukan", null, 404);
     }
-
-    // Buat objek data yang akan di-update secara dinamis
-    const dataUpdate = {
-      name,
-      email,
-      semester: Number(semester),
-      classOf: Number(classOf),
-      tfGroupId,
-      classId,
-    };
-
-    // KONDISIONAL: Jika Postman mengirimkan studentNumber, masukkan ke objek update
-    // Jika tidak dikirim (undefined/kosong), database akan tetap pakai nilai lama
-    if (studentNumber && studentNumber.trim() !== "") {
-      dataUpdate.studentNumber = studentNumber.trim(); // .trim() juga memastikan spasi tak sengaja ikut tersimpan
-    }
-
-    // Jalankan perintah update dengan objek yang sudah di atur
     const student = await prisma.student.update({
-      where: { id },
-      data: dataUpdate, // Menggunakan objek dinamis di sini
+      where: {id},
+      data: {
+        name: name !== undefined ? name : existing.name,
+        email: email !== undefined ? email : existing.email,
+        classOf: classOf !== undefined ? Number(classOf) : existing.classOf,
+        tfGroupId: tfGroupId !== undefined ? tfGroupId : existing.tfGroupId,
+        classId: classId !== undefined ? classId : existing.classId,
+        studentNumber: studentNumber !== undefined ? studentNumber : existing.studentNumber
+      },
     });
     return successResponse(res, "berhasil memperbarui data mahasiswa", student);
   } catch (error) {
