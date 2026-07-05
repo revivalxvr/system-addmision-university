@@ -259,14 +259,12 @@ export const createStudyPlan = async (req, res) => {
       });
     }
 
-    // 🚀 Ambil 'courseId' kembali, bukan scheduleId
     const { studentId, yearId, status, gpa, courseId } = req.body;
 
     if (!studentId || !yearId || !status) {
       return errorResponse(res, "studentId, yearId, dan status wajib diisi!", null, 400);
     }
 
-    // Ekstrak string UUID courseId dari Postman (misal: "uuidMatkulA, uuidMatkulB")
     const courseIds = courseId
       ? courseId
           .split(",")
@@ -278,9 +276,32 @@ export const createStudyPlan = async (req, res) => {
       return errorResponse(res, "Pilih minimal satu mata kuliah (courseId)!", null, 400);
     }
 
+    //  1: Ambil data bobot SKS (credits) dari database untuk mata kuliah yang dipilih
+    const selectedCourses = await prisma.course.findMany({
+      where: {
+        id: { in: courseIds }
+      },
+      select: {
+        name: true,
+        credits: true
+      }
+    });
+
+    //  2: Hitung total SKS menggunakan fungsi reduce
+    const totalCredits = selectedCourses.reduce((sum, course) => sum + (course.credits || 0), 0);
+
+    //  3: Validasi batas maksimum 24 SKS
+    if (totalCredits > 24) {
+      return res.status(400).json({
+        success: false,
+        message: `Gagal membuat KRS! Total SKS yang dipilih (${totalCredits} SKS) melebihi batas maksimum yang diizinkan (24 SKS).`,
+        detail: selectedCourses.map(c => `${c.name} (${c.credits} SKS)`)
+      });
+    }
+
+    // Jika lolos validasi, jalankan proses penyimpanan ke database
     const result = await prisma.$transaction(async (tx) => {
       
-      // 1. Buat lembar data induk KRS
       const studyPlan = await tx.studyPlan.create({
         data: {
           studentId: studentId,
@@ -290,25 +311,26 @@ export const createStudyPlan = async (req, res) => {
         },
       });
 
-      // 2. Petakan ke tabel penghubung menggunakan 'courseId'
-      // Kolom 'scheduleId' otomatis akan bernilai NULL di database (menunggu di-plot nanti)
       const studyPlanCourses = courseIds.map((id) => ({
         studyPlanId: studyPlan.id,
         courseId: id, 
       }));
 
-      // Mass-insert ke tabel relasi StudyPlanCourse
       await tx.studyPlanCourse.createMany({
         data: studyPlanCourses,
       });
 
       return {
-        ...studyPlan,
+        id: studyPlan.id,
+        studentId: studyPlan.studentId,
+        yearId: studyPlan.yearId,
+        totalCreditsUsed: totalCredits, // Informasikan total SKS yang berhasil diambil
+        status: studyPlan.status,
         courses: studyPlanCourses,
       };
     });
 
-    return successResponse(res, "berhasil membuat KRS ", result, 200);
+    return successResponse(res, `berhasil membuat KRS dengan total ${totalCredits} SKS`, result, 200);
   } catch (error) {
     return errorResponse(res, "gagal membuat study plans", error.message, 500);
   }
@@ -326,7 +348,7 @@ export const updateStudyPlan = async (req, res) => {
 
     const { id } = req.params;
 
-    // 1. Cari data lama di database (Menjadi acuan fallback jika data tidak dikirim frontend)
+    // 1. Cari data lama di database sebagai acuan fallback
     const existing = await prisma.studyPlan.findUnique({
       where: { id },
     });
@@ -335,13 +357,51 @@ export const updateStudyPlan = async (req, res) => {
       return errorResponse(res, "Data study plan tidak ditemukan", null, 404);
     }
 
-    // 2. Ambil parameter body secara transparan
     const { studentId, yearId, status, gpa, courseId } = req.body;
 
-    // 3. Jalankan Prisma atomik transaksi
+    //  1: Inisialisasi variabel untuk menampung data SKS
+    let totalCredits = 0;
+    let courseIds = [];
+
+    //  2: Lakukan pengecekan HANYA jika frontend mengirimkan 'courseId' baru
+    if (courseId !== undefined) {
+      courseIds = courseId
+        ? courseId
+            .split(",")
+            .map((cId) => cId.trim())
+            .filter((cId) => cId !== "")
+        : [];
+
+      if (courseIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Pemberian courseId baru tidak boleh kosong!"
+        });
+      }
+
+      // Ambil bobot SKS dari database untuk mata kuliah baru yang dikirim
+      const selectedCourses = await prisma.course.findMany({
+        where: { id: { in: courseIds } },
+        select: { name: true, credits: true }
+      });
+
+      // Hitung total SKS baru
+      totalCredits = selectedCourses.reduce((sum, course) => sum + (course.credits || 0), 0);
+
+      // Validasi batas maksimum 24 SKS
+      if (totalCredits > 24) {
+        return res.status(400).json({
+          success: false,
+          message: `Gagal update KRS! Total SKS baru yang Anda pilih (${totalCredits} SKS) melebihi batas maksimum 24 SKS.`,
+          detail: selectedCourses.map(c => `${c.name} (${c.credits} SKS)`)
+        });
+      }
+    }
+
+    // 2. Jalankan Prisma atomik transaksi jika lolos validasi (atau jika tidak ada perubahan matkul)
     const result = await prisma.$transaction(async (tx) => {
       
-      // A. UPDATE DATA INDUK (STUDYPLAN) SECARA PARSIAL
+      // A. Update data utama StudyPlan secara parsial
       const updatedStudyPlan = await tx.studyPlan.update({
         where: { id },
         data: {
@@ -352,47 +412,32 @@ export const updateStudyPlan = async (req, res) => {
         },
       });
 
-      // B. PROSES PEMBARUAN DAFTAR MATA KULIAH (HANYA JIKA 'courseId' DIKIRIM OLEH FRONTEND)
+      // B. Proses pembaruan daftar mata kuliah di tabel penghubung
       let finalCourses = [];
 
       if (courseId !== undefined) {
-        // Ekstrak string UUID jika ada kiriman baru dari frontend
-        const courseIds = courseId
-          ? courseId
-              .split(",")
-              .map((cId) => cId.trim())
-              .filter((cId) => cId !== "")
-          : [];
-
-        if (courseIds.length === 0) {
-          throw new Error("Pemberian courseId baru tidak boleh kosong!");
-        }
-
-        // Hapus daftar mata kuliah lama di KRS ini
+        // Hapus daftar mata kuliah lama
         await tx.studyPlanCourse.deleteMany({
           where: { studyPlanId: id },
         });
 
-        // Petakan ke objek data penghubung baru
+        // Format data baru
         const studyPlanCourses = courseIds.map((cId) => ({
           studyPlanId: id,
           courseId: cId,
         }));
 
-        // Simpan massal mata kuliah baru
+        // Simpan massal data baru
         await tx.studyPlanCourse.createMany({
           data: studyPlanCourses,
         });
 
         finalCourses = studyPlanCourses;
       } else {
-        // KONDISI JIKA FRONTEND TIDAK MENGIRIM 'courseId': Ambil data mata kuliah yang sudah ada di DB
+        // Jika tidak ada perubahan matkul, ambil data matkul lama yang saat ini ada di DB
         finalCourses = await tx.studyPlanCourse.findMany({
           where: { studyPlanId: id },
-          select: {
-            studyPlanId: true,
-            courseId: true,
-          }
+          select: { studyPlanId: true, courseId: true }
         });
       }
 
