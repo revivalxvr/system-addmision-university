@@ -27,7 +27,6 @@ export const getAllStudyPlans = async (req, res) => {
             id: true,
             name: true,
             studentNumber: true,
-         
             class: {
               select: {
                 year: {
@@ -46,6 +45,7 @@ export const getAllStudyPlans = async (req, res) => {
             score: true,
             studyPlanId: true,
             courseId: true,
+            scheduleId: true, // 🚀 PERBAIKAN: Wajib dipilih agar data c.scheduleId di bawah tidak undefined
             // Ambil info mata kuliah langsung
             course: {
               select: {
@@ -87,7 +87,6 @@ export const getAllStudyPlans = async (req, res) => {
       studentName: studyPlan.student?.name ?? null,
       studentNumber: studyPlan.student?.studentNumber ?? null,
       studentYearId: studyPlan.student?.class?.year?.id ?? null,
-     
       studentYearName: studyPlan.student?.class?.year?.name ?? null,
 
       // Mapping data list mata kuliah pilihan mahasiswa
@@ -97,7 +96,7 @@ export const getAllStudyPlans = async (req, res) => {
         studyPlanId: c.studyPlanId,
         courseName: c.course?.name ?? null, 
         courseCode: c.course?.code ?? null,
-        courseScore: c.score,
+        courseScore: c.score, // Nilai murni tetap dipertahankan sesuai input database
         credits: c.course?.credits ?? null,
         
         // AMAN DARI NULL: Mengambil info jadwal & dosen jika kelak sudah di-plotting admin
@@ -252,19 +251,23 @@ export const getStudyPlanById = async (req, res) => {
 export const createStudyPlan = async (req, res) => {
   try {
     const tokenCredential = req.user;
+    
+    // 1. Validasi Hak Akses Admin
     if (tokenCredential.role !== "admin") {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized",
+        message: "Unauthorized. Hanya admin yang dapat membuatkan KRS awal mahasiswa.",
       });
     }
 
     const { studentId, yearId, status, gpa, courseId } = req.body;
 
+    // Validasi data input wajib
     if (!studentId || !yearId || !status) {
       return errorResponse(res, "studentId, yearId, dan status wajib diisi!", null, 400);
     }
 
+    // Memecah string koma menjadi array ID mata kuliah
     const courseIds = courseId
       ? courseId
           .split(",")
@@ -276,7 +279,7 @@ export const createStudyPlan = async (req, res) => {
       return errorResponse(res, "Pilih minimal satu mata kuliah (courseId)!", null, 400);
     }
 
-    //  1: Ambil data bobot SKS (credits) dari database untuk mata kuliah yang dipilih
+    // 2. Ambil data bobot SKS (credits) dari database untuk mata kuliah yang dipilih
     const selectedCourses = await prisma.course.findMany({
       where: {
         id: { in: courseIds }
@@ -287,10 +290,10 @@ export const createStudyPlan = async (req, res) => {
       }
     });
 
-    //  2: Hitung total SKS menggunakan fungsi reduce
+    // 3. Hitung total SKS menggunakan fungsi reduce
     const totalCredits = selectedCourses.reduce((sum, course) => sum + (course.credits || 0), 0);
 
-    //  3: Validasi batas maksimum 24 SKS
+    // 4. Validasi batas maksimum 24 SKS
     if (totalCredits > 24) {
       return res.status(400).json({
         success: false,
@@ -299,23 +302,28 @@ export const createStudyPlan = async (req, res) => {
       });
     }
 
-    // Jika lolos validasi, jalankan proses penyimpanan ke database
+    // 5. Jalankan proses penyimpanan menggunakan database transaction
     const result = await prisma.$transaction(async (tx) => {
       
+      // Buat lembar induk Study Plan (KRS)
       const studyPlan = await tx.studyPlan.create({
         data: {
           studentId: studentId,
-          yearId: yearId,
-          status: status,
-          gpa: gpa ? parseInt(gpa) : null,
+          yearId: yearId, // Isinya bisa ID Semester Aktif (misal: "2026-ganjil")
+          status: status, // Admin mengirim status "pending" agar nanti disetujui Dosen PA
+          gpa: gpa ? parseFloat(gpa) : null,
         },
       });
 
+      // Siapkan baris item mata kuliah di KRS
       const studyPlanCourses = courseIds.map((id) => ({
         studyPlanId: studyPlan.id,
         courseId: id, 
+        scheduleId: null, // 🚀 AMAN: Set null dulu karena plotting jadwal kelas dilakukan belakangan
+        score: null,      // Nilai awal dikosongkan
       }));
 
+      // Insert massal ke database
       await tx.studyPlanCourse.createMany({
         data: studyPlanCourses,
       });
@@ -324,15 +332,17 @@ export const createStudyPlan = async (req, res) => {
         id: studyPlan.id,
         studentId: studyPlan.studentId,
         yearId: studyPlan.yearId,
-        totalCreditsUsed: totalCredits, // Informasikan total SKS yang berhasil diambil
+        totalCreditsUsed: totalCredits, 
         status: studyPlan.status,
         courses: studyPlanCourses,
       };
     });
 
-    return successResponse(res, `berhasil membuat KRS dengan total ${totalCredits} SKS`, result, 200);
+    // 🚀 Status diubah ke 201 untuk penanda data berhasil dibuat (Created)
+    return successResponse(res, `Berhasil membuat pengajuan KRS dengan total ${totalCredits} SKS`, result, 201);
   } catch (error) {
-    return errorResponse(res, "gagal membuat study plans", error.message, 500);
+    console.error("Error Admin CreateStudyPlan: ", error.message);
+    return errorResponse(res, "Gagal membuat data rencana studi (KRS)", error.message, 500);
   }
 };
 // updateStudyPlan,
@@ -354,7 +364,7 @@ export const updateStudyPlan = async (req, res) => {
     });
     
     if (!existing) {
-      return errorResponse(res, "Data study plan tidak ditemukan", null, 404);
+      return errorResponse(res, "Data study plan tidak ditemukan tes", null, 404);
     }
 
     const { studentId, yearId, status, gpa, courseId } = req.body;
@@ -408,7 +418,7 @@ export const updateStudyPlan = async (req, res) => {
           studentId: studentId !== undefined ? studentId : existing.studentId,
           yearId: yearId !== undefined ? yearId : existing.yearId,
           status: status !== undefined ? status : existing.status,
-          gpa: gpa !== undefined ? (gpa ? parseInt(gpa) : null) : existing.gpa,
+          gpa: gpa !== undefined ? (gpa ? Number(gpa) : null) : existing.gpa,
         },
       });
 
@@ -505,5 +515,81 @@ export const deleteStudyPlan = async (req, res) => {
   } catch (error) {
     console.error("Error Delete Study Plan: ", error.message);
     return errorResponse(res, "Terjadi kesalahan saat menghapus data", error.message, 500);
+  }
+};
+export const plotScheduleToStudyPlan = async (req, res) => {
+  try {
+    const tokenCredential = req.user;
+
+    // 1. Validasi Hak Akses: Harus Admin
+    if (tokenCredential.role !== "admin") {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Hanya admin yang dapat melakukan plotting jadwal kelas.",
+      });
+    }
+
+    // Ambil data dari body request Postman
+    const { studyPlanCourseId, scheduleId } = req.body;
+
+    // 2. Validasi Input Kosong
+    if (!studyPlanCourseId || !scheduleId) {
+      return errorResponse(res, "studyPlanCourseId dan scheduleId wajib diisi!", null, 400);
+    }
+
+    // 3. Validasi: Pastikan Jadwal (Schedule) tujuan memang terdaftar di database
+    const targetSchedule = await prisma.schedule.findUnique({
+      where: { id: scheduleId },
+      include: {
+        lecture: true // Ikut sertakan data dosen pengampu jadwal ini
+      }
+    });
+
+    if (!targetSchedule) {
+      return errorResponse(res, "Jadwal kelas (Schedule) tidak ditemukan di database!", null, 404);
+    }
+
+    // 4. Validasi: Pastikan baris KRS mahasiswa (StudyPlanCourse) yang mau di-plot itu ada
+    const targetCourseItem = await prisma.studyPlanCourse.findUnique({
+      where: { id: studyPlanCourseId },
+      include: {
+        course: true // Ambil info mata kuliahnya untuk konfirmasi nama matkul
+      }
+    });
+
+    if (!targetCourseItem) {
+      return errorResponse(res, "Data item KRS mahasiswa tidak ditemukan!", null, 404);
+    }
+
+    // 5. Eksekusi Update: Masukkan scheduleId ke dalam StudyPlanCourse mahasiswa
+    const updatedPlotting = await prisma.studyPlanCourse.update({
+      where: {
+        id: studyPlanCourseId,
+      },
+      data: {
+        scheduleId: scheduleId, // Mengunci jadwal kelas tetap
+      },
+    });
+
+    // 6. Kirim Response Sukses ke Postman dengan format yang bersih dan jelas
+    return successResponse(
+      res, 
+      `Berhasil mem-plot kelas untuk mata kuliah ${targetCourseItem.course.name}`, 
+      {
+        studyPlanCourseId: updatedPlotting.id,
+        courseId: updatedPlotting.courseId,
+        courseName: targetCourseItem.course.name,
+        scheduleId: updatedPlotting.scheduleId,
+        day: targetSchedule.day,
+        room: targetSchedule.room || "-",
+        timeStart: targetSchedule.timeStart,
+        timeEnd: targetSchedule.timeEnd,
+        lectureName: targetSchedule.lecture?.name || "Belum ada dosen pengampu"
+      }, 
+      200
+    );
+  } catch (error) {
+    console.error("=== ERROR PLOTTING ADMIN ===", error.message);
+    return errorResponse(res, "Gagal memproses plotting jadwal kuliah", error.message, 500);
   }
 };

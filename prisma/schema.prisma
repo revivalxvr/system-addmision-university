@@ -95,6 +95,8 @@ model Student {
   role          String       @default("student")
   studentNumber String       @unique // NIM
   classOf       Int
+  lectureId     String?     // Foreign key ke model Lecture
+  advisor       Lecture?    @relation(fields: [lectureId], references: [id])
   tfGroupId     String
   tfGroup       TfGroup      @relation(fields: [tfGroupId], references: [id])
   classId       String // Menentukan apakah mahasiswa mengambil kelas Pagi atau Sore
@@ -117,6 +119,7 @@ model Lecture {
   majorId       String
   major         Major      @relation(fields: [majorId], references: [id])
   schedule      Schedule[]
+  student       Student[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 }

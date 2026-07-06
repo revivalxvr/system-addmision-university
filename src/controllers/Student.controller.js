@@ -20,16 +20,30 @@ export const getAllStudents = async (req, res) => {
     const students = await prisma.student.findMany({
       include: {
         class: {
-          include: {
+          select : {
+            name: true,
             major: {
-              include: {
-                faculty: true,
+              select: {
+                name: true,
               },
             },
-            year: true,
+            year: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
-        tfGroup: true,
+        tfGroup: {
+          select: {
+            group: true,
+          },
+        },
+        advisor: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
     return successResponse(
@@ -98,9 +112,9 @@ export const createStudent = async (req, res) => {
         message: "Unauthorized",
       });
     }
-    const { name, email, classOf, tfGroupId, classId } = req.body;
+    const { name, email, classOf, tfGroupId, classId, lectureId } = req.body;
 
-    if (!name || !email  || !classOf || !tfGroupId || !classId) {
+    if (!name || !email  || !classOf || !tfGroupId || !classId || !lectureId) {
       return errorResponse(res, "data mahasiswa harus diisi", null, 401);
     }
 
@@ -134,6 +148,7 @@ export const createStudent = async (req, res) => {
         classOf: Number(classOf),
         tfGroupId,
         classId,
+        lectureId,
       },
     });
     return successResponse(res, "berhasil membuat data mahasiswa", student);
@@ -163,10 +178,11 @@ export const updateStudent = async (req, res) => {
       classOf,
       tfGroupId,
       classId,
+      lectureId,
       studentNumber,
     } = req.body;
 
-    if (!name || !email || !classOf || !tfGroupId || !classId) {
+    if (!name || !email || !classOf || !tfGroupId || !classId || !lectureId) {
       return errorResponse(res, "data mahasiswa harus diisi", null, 401);
     }
 
@@ -187,6 +203,7 @@ export const updateStudent = async (req, res) => {
         classOf: classOf !== undefined ? Number(classOf) : existing.classOf,
         tfGroupId: tfGroupId !== undefined ? tfGroupId : existing.tfGroupId,
         classId: classId !== undefined ? classId : existing.classId,
+        lectureId: lectureId !== undefined ? lectureId : existing.lectureId,
         studentNumber: studentNumber !== undefined ? studentNumber : existing.studentNumber
       },
     });

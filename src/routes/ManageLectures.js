@@ -30,9 +30,9 @@ router.post("/login", loginLecture);
 
 
 router.use(verifyToken);
-
-router.put("/studyplans/:id", updateStudyPlanById);
 router.put("/studyplans/score/:id", updateStudyPlanScoreById);
+router.put("/studyplans/:id", updateStudyPlanById);
+
 
 router.get("/studyplans", getStudyPlanCourseByLectureId);
 router.get("/schedule", getScheduleByLectureId);

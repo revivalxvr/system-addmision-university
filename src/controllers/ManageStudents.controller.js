@@ -112,6 +112,7 @@ export const logoutStudent = async (req, res) => {
 export const getSecheduleById = async (req, res) => {
   try {
     const tokenCredential = req.user;
+    const { id } = tokenCredential; // ID Student dari token login
 
     if (tokenCredential.role !== "student") {
       return res.status(401).json({
@@ -120,8 +121,8 @@ export const getSecheduleById = async (req, res) => {
       });
     }
 
-    const { id } = tokenCredential;
-    const schedule = await prisma.schedule.findMany({
+    // 1. Ambil jadwal berdasarkan mahasiswa yang terdaftar di kelas tersebut
+    const schedules = await prisma.schedule.findMany({
       where: {
         class: {
           student: {
@@ -130,82 +131,100 @@ export const getSecheduleById = async (req, res) => {
         },
       },
       include: {
+        // Ambil data kelas induk, tahun ajaran, dan prodi
         class: {
           include: {
             year: true,
             major: true,
           },
         },
-        course: {
-          include: {
-            lecture: true,
-          },
-        },
+        // Ambil data mata kuliah secara murni
+        course: true,
+        // 🚀 JALUR BARU: Ambil data dosen pengajar langsung dari level Schedule
+        lecture: true, 
       },
+      orderBy: {
+        timeStart: "asc", // Mengurutkan jadwal dari jam paling pagi
+      }
     });
-    if (!schedule || schedule.length === 0) {
-      return errorResponse(res, "data tidak ditemukan", null, 404);
+
+    if (!schedules || schedules.length === 0) {
+      return errorResponse(res, "Jadwal kuliah untuk Anda tidak ditemukan", null, 404);
     }
 
-    const formattedSchedule = schedule.map((item) => ({
+    // 2. Petakan data (Mapping) ke dalam format JSON yang bersih untuk Frontend Anda
+    const formattedSchedule = schedules.map((item) => ({
       id: item.id,
       timeStart: item.timeStart,
       timeEnd: item.timeEnd,
       day: item.day,
+      room: item.room || "-",          // 🚀 TAMBAHAN: Menyertakan Ruangan Kelas
+      capacity: item.capacity || 0,    // 🚀 TAMBAHAN: Menyertakan Kapasitas Kelas
       classId: item.classId,
       courseId: item.courseId,
+      lectureId: item.lectureId,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
 
-      //tabel calss
+      // Objek Relasi Kelas
       class: {
         id: item.class.id,
+        name: item.class.name,
+        semester: item.class.semester || null,
         yearId: item.class.yearId,
         majorId: item.class.majorId,
         createdAt: item.class.createdAt,
         updatedAt: item.class.updatedAt,
-        year: item.class.year,
-        major: {
+        year: item.class.year ? {
+          id: item.class.year.id,
+          name: item.class.year.name,
+        } : null,
+        major: item.class.major ? {
           id: item.class.major.id,
           name: item.class.major.name,
           code: item.class.major.code,
-          createdAt: item.class.major.createdAt,
-          updatedAt: item.class.major.updatedAt,
-        },
+        } : null,
       },
+
+      // Objek Relasi Mata Kuliah & Dosen Pengajar
       course: {
-        id: item.course.id,
-        name: item.course.name,
-        code: item.course.code,
-        lectureId: item.course.lectureId,
-        lectureName: item.course.lecture?.name || null,
-        lectureNumber: item.course.lecture?.lectureNumber || null,
-        credits: item.course.credits,
-        createdAt: item.course.createdAt,
-        updatedAt: item.course.updatedAt,
-        updatedAt: item.course.updatedAt,
+        id: item.course?.id || null,
+        name: item.course?.name || "-",
+        code: item.course?.code || "-",
+        credits: item.course?.credits || 0,
+        createdAt: item.course?.createdAt,
+        updatedAt: item.course?.updatedAt,
+        // Tarik data dosen langsung dari relasi item.lecture (tingkat Schedule)
+        lectureId: item.lectureId,
+        lectureName: item.lecture?.name || null,
+        lectureNumber: item.lecture?.lectureNumber || null, 
       },
     }));
+
     return successResponse(
       res,
-      "berhasil mendapatkan data",
+      "berhasil mendapatkan data jadwal kuliah mahasiswa",
       formattedSchedule,
       200,
     );
   } catch (error) {
-    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    console.error("Error GetStudentSchedule: ", error.message);
+    return errorResponse(res, "terjadi kesalahan pada sistem", error.message, 500);
   }
 };
 // getAllCourses,
 export const getAllCourses = async (req, res) => {
   try {
     const tokenCredential = req.user;
+    
     if (tokenCredential.role !== "student") {
       return res.status(401).json({
         success: false,
         message: "Unauthorized student",
       });
     }
+
+    // 1. Ambil data profil mahasiswa bimbingan yang sedang login
     const student = await prisma.student.findUnique({
       where: {
         id: tokenCredential.id,
@@ -218,16 +237,24 @@ export const getAllCourses = async (req, res) => {
         },
       },
     });
+
     if (!student) {
-      return errorResponse(res, "data tidak ditemukan", null, 404);
+      return errorResponse(res, "Data mahasiswa tidak ditemukan", null, 404);
     }
+
+    // 2. Ambil seluruh data Mata Kuliah beserta info Jadwal untuk mendapatkan relasi Dosen
     const courses = await prisma.course.findMany({
       include: {
-        lecture: {
+        // 🚀 JALUR BARU: Lewati schedule untuk mendapatkan dosen pengajar, jurusan, dan fakultas
+        schedule: {
           include: {
-            major: {
+            lecture: {
               include: {
-                faculty: true,
+                major: {
+                  include: {
+                    faculty: true,
+                  },
+                },
               },
             },
           },
@@ -235,31 +262,40 @@ export const getAllCourses = async (req, res) => {
       },
     });
 
-    const formattedData = courses.map((c) => ({
-      studentId: student.id,
-      studentName: student.name,
-      studentNumber: student.studentNumber,
-      year: student.class?.year?.name || null,
-      course: {
-        id: c.id,
-        name: c.name,
-        code: c.code,
-        credits: c.credits,
-        lectureId: c.lectureId,
-        lectureName: c.lecture.name,
-        majorName: c.lecture.major.name,
-        facultyName: c.lecture.major.faculty.name,
-      },
-    }));
+    // 3. FORMAT DATA: Sesuaikan pemetaan properti karena lecture berada di dalam schedule
+    const formattedData = courses.map((c) => {
+      // Ambil jadwal pertama yang tersedia untuk mengambil informasi dosen pengampu matkul ini
+      const activeSchedule = c.schedule?.[0] || null;
+      const lectureData = activeSchedule?.lecture || null;
+
+      return {
+        studentId: student.id,
+        studentName: student.name,
+        studentNumber: student.studentNumber,
+        year: student.class?.year?.name || null,
+        course: {
+          id: c.id,
+          name: c.name,
+          code: c.code,
+          credits: c.credits,
+          // Mengambil info dari relasi baru yang aman dari error
+          lectureId: lectureData?.id || null,
+          lectureName: lectureData?.name || "Belum Ada Dosen",
+          majorName: lectureData?.major?.name || "Umum",
+          facultyName: lectureData?.major?.faculty?.name || "Umum",
+        },
+      };
+    });
 
     return successResponse(
       res,
-      "berhasil mendapatkan data",
+      "berhasil mendapatkan data seluruh mata kuliah",
       formattedData,
       200,
     );
   } catch (error) {
-    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    console.error("Error GetAllCourses Student: ", error.message);
+    return errorResponse(res, "terjadi kesalahan pada server", error.message, 500);
   }
 };
 // createStudyPlan,
@@ -330,7 +366,8 @@ export const getStudyPlanById = async (req, res) => {
     }
 
     const { id } = tokenCredential;
-    // 1. Ambil data tunggal dari database
+
+    // 1. Ambil data dengan struktur include yang telah disesuaikan
     const studyPlan = await prisma.studyPlan.findMany({
       where: { studentId: id },
       include: {
@@ -345,9 +382,12 @@ export const getStudyPlanById = async (req, res) => {
         },
         courses: {
           include: {
-            course: {
+            // Jalur Baru: Ambil mata kuliah murni dari item KRS
+            course: true,
+            // Jalur Baru: Ambil jadwal terkait untuk menarik data Dosen Pengajar, Ruangan, dll.
+            schedule: {
               include: {
-                lecture: true,
+                lecture: true, // 🚀 Dosen sekarang diambil dari tingkat Schedule (Jadwal)
               },
             },
           },
@@ -355,43 +395,56 @@ export const getStudyPlanById = async (req, res) => {
       },
     });
 
-    // 2. Validasi jika data tidak ditemukan
-    if (!studyPlan) {
-      return errorResponse(res, "study plan tidak ditemukan", null, 404);
+    // 2. Validasi jika data array kosong
+    if (!studyPlan || studyPlan.length === 0) {
+      return errorResponse(res, "Study plan (KRS) tidak ditemukan", null, 404);
     }
 
-    // 3. FORMAT DATA: Langsung buat objek baru, TIDAK PERLU .map() karena bukan array
+    // 3. FORMAT DATA: Lakukan mapping karena prisma.studyPlan.findMany mengembalikan Array
     const formattedStudyPlan = studyPlan.map((plan) => ({
       id: plan.id,
       status: plan.status,
-      createdAt: plan.createdAt,
-      studentNumber: plan.student.studentNumber,
-      stundentId: plan.student.id,
-      studentName: plan.student.name,
-      semester: plan.student.semester,
-      year: plan.student.class?.year?.name,
       gpa: plan.gpa,
+      studentId: plan.student?.id || null,
+      studentName: plan.student?.name || "-",
+      studentNumber: plan.student?.studentNumber || "-",
+      semester: plan.student?.semester || null,
+      year: plan.student?.class?.year?.name || "-",
+      createdAt: plan.createdAt,
+      updatedAt: plan.updatedAt,
 
+      // Format daftar matkul pilihan di dalam lembar KRS
       courses: plan.courses.map((c) => ({
-        id: c.course.id,
-        name: c.course?.name || null,
-        code: c.course?.code || null,
-        credits: c.course?.credits || null,
-        score: c.score,
-        lectureName: c.course.lecture.name,
-        lectureNumber: c.course.lecture.lectureNumber,
+        id: c.id, // ID dari StudyPlanCourse
+        courseId: c.course?.id || null,
+        name: c.course?.name || "-",
+        code: c.course?.code || "-",
+        credits: c.course?.credits || 0,
+        score: c.score, // Nilai huruf/angka mahasiswa untuk matkul ini
+        
+        // 🚀 Tarik data dosen aman via relasi schedule (Jadwal pelaksanaan kuliah)
+        lectureId: c.schedule?.lectureId || null,
+        lectureName: c.schedule?.lecture?.name || "Belum Diplot Dosen",
+        lectureNumber: c.schedule?.lecture?.lectureNumber || null,
+        
+        // Bonus info untuk mempermudah KRS Mahasiswa di frontend
+        room: c.schedule?.room || "-",
+        day: c.schedule?.day || "-",
+        timeStart: c.schedule?.timeStart || null,
+        timeEnd: c.schedule?.timeEnd || null,
       })),
     }));
 
-    // 4. Kirim data yang sudah di-format (formattedStudyPlan)
+    // 4. Kirim data hasil format ke frontend
     return successResponse(
       res,
-      "berhasil mendapatkan study plan",
+      "berhasil mendapatkan study plan mahasiswa",
       formattedStudyPlan,
       200,
     );
   } catch (error) {
-    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    console.error("Error GetStudyPlanById student: ", error.message);
+    return errorResponse(res, "terjadi kesalahan pada sistem krs", error.message, 500);
   }
 };
 // getPaymentById,
