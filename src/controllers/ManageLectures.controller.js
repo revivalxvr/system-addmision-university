@@ -589,20 +589,21 @@ export const getStudyPlanCourseByLectureId = async (req, res) => {
       });
     }
 
-    // 1. Ambil data dengan memetakan include secara rapi (Hindari pencampuran select & include)
+    // 1. Ambil data dengan memetakan include secara rapi (Sertakan relasi lecture di dalam schedule)
     const studyPlanCourses = await prisma.studyPlanCourse.findMany({
       where: {
-        // 🚀 Jalur Baru: Cari berdasarkan dosen pengajar yang ada di dalam Schedule (Jadwal)
         schedule: {
           lectureId: id,
         },
       },
       include: {
-        // Ambil data Mata Kuliah murni
         course: true,
-        // Ambil data Jadwal untuk mendapatkan info ruangan/hari jika dibutuhkan
-        schedule: true,
-        // Ambil data Lembar KRS induk sampai ke Mahasiswa & Tahun Ajaran kelasnya
+        //  Ikut sertakan tabel lecture di dalam schedule untuk mendapatkan nama dosen
+        schedule: {
+          include: {
+            lecture: true, 
+          }
+        },
         studyPlan: {
           include: {
             student: {
@@ -619,7 +620,6 @@ export const getStudyPlanCourseByLectureId = async (req, res) => {
       },
     });
 
-    // 🚀 PERBAIKAN VALIDASI: Cek jika array kosong dengan benar
     if (studyPlanCourses.length === 0) {
       return errorResponse(res, "tidak ada data study plan untuk dosen ini", null, 404);
     }
@@ -628,28 +628,29 @@ export const getStudyPlanCourseByLectureId = async (req, res) => {
     
     // 2. Lakukan penggabungan (Grouping) berdasarkan Lembar KRS Mahasiswa
     studyPlanCourses.forEach((spc) => {
-      // Cari apakah lembar KRS mahasiswa ini sudah dimasukkan ke array mergedData
       let existingGroup = mergedData.find(
         (item) => item.studyPlan.id === spc.studyPlan.id
       );
+
+      // Ambil nama dosen dari database, beri fallback "-" jika datanya kosong
+      const lectureName = spc.schedule?.lecture?.name || "-";
 
       const courseData = {
         id: spc.course?.id || null,
         name: spc.course?.name || "-",
         code: spc.course?.code || "-",
         credits: spc.course?.credits || 0,
-        score: spc.score, // Nilai mahasiswa di mata kuliah ini
-        room: spc.schedule?.room || "-", // Info tambahan ruangan mengajar Anda
+        score: spc.score, 
+        room: spc.schedule?.room || "-", 
         day: spc.schedule?.day || "-",
+        lectureName: lectureName, // 🚀 SEKARANG MUNCUL DI SINI: Nama dosen pengampu matkul
       };
 
       if (existingGroup) {
-        // Jika lembar KRS mahasiswa ini sudah terdaftar, tinggal selipkan matkul Anda yang lain (jika mengajar > 1 matkul di kelas itu)
         existingGroup.courses.push(courseData);
       } else {
-        // Jika belum terdaftar, buat struktur data baru untuk mahasiswa tersebut
         mergedData.push({
-          id: spc.id, // ID relasi KRS item
+          id: spc.id, 
           createdAt: spc.createdAt,
           updatedAt: spc.updatedAt,
           studyPlan: {
