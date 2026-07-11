@@ -373,7 +373,7 @@ export const getCoursesByLectureId = async (req, res) => {
 export const getStudentByClassId = async (req, res) => {
   try {
     const tokenCredential = req.user;
-    const { id: lectureId } = tokenCredential; // ID Dosen yang sedang login
+    const { id: lectureId } = tokenCredential; 
 
     if (tokenCredential.role !== "lecture") {
       return res.status(401).json({
@@ -387,11 +387,10 @@ export const getStudentByClassId = async (req, res) => {
       return errorResponse(res, "courseId dan classId harus diisi", null, 400);
     }
 
-    // 2. Ambil data mahasiswa (Disinkronkan dengan field 'studyPlan' tanpa 's')
     const students = await prisma.student.findMany({
       where: {
         classId: classId, 
-        studyPlan: { // 🚀 PERBAIKAN: Ubah studyPlans -> studyPlan sesuai skema Prisma Anda
+        studyPlan: { 
           some: {
             courses: {
               some: {
@@ -408,7 +407,7 @@ export const getStudentByClassId = async (req, res) => {
         id: true,
         name: true,
         studentNumber: true,
-        studyPlan: { // 🚀 PERBAIKAN: Ubah studyPlans -> studyPlan sesuai skema Prisma Anda
+        studyPlan: { 
           select: {
             id: true,
             courses: {
@@ -422,6 +421,16 @@ export const getStudentByClassId = async (req, res) => {
                 id: true,       
                 score: true,    
                 scheduleId: true,
+                uts: true,       
+                uas: true,       
+                // Absensi 1-16 (Sudah benar sesuai schema Anda)
+                attendance1: true, attendance2: true, attendance3: true, attendance4: true,
+                attendance5: true, attendance6: true, attendance7: true, attendance8: true,
+                attendance9: true, attendance10: true, attendance11: true, attendance12: true,
+                attendance13: true, attendance14: true, attendance15: true, attendance16: true,
+                
+                // 🚀 PERBAIKAN UTAMA: Mengubah assignment menjadi task sesuai skema DB Anda
+                task1: true, task2: true, task3: true, task4: true, task5: true,
               },
             },
           },
@@ -429,17 +438,30 @@ export const getStudentByClassId = async (req, res) => {
       },
     });
 
-    // 3. RAPAIKAN FORMAT DATA (Flat Formatting)
+    // 3. RAPAIKAN FORMAT DATA (Flat Formatting untuk konsumsi Frontend)
     const formattedStudents = students.map((s) => {
-      // 🚀 PERBAIKAN: Sesuaikan pemanggilan variabel dari s.studyPlans -> s.studyPlan
-      const matchedCourse = s.studyPlan?.[0]?.courses?.[0] || null;
+      const m = s.studyPlan?.[0]?.courses?.[0] || null;
 
       return {
         studentId: s.id,
         studentName: s.name,
         studentNumber: s.studentNumber,
-        studyPlanCourseId: matchedCourse ? matchedCourse.id : null, 
-        currentScore: matchedCourse ? matchedCourse.score : null,
+        studyPlanCourseId: m ? m.id : null, 
+        currentScore: m ? m.score : null,
+        uts: m ? m.uts : null,
+        uas: m ? m.uas : null,
+        
+        attendance: m ? [
+          m.attendance1, m.attendance2, m.attendance3, m.attendance4,
+          m.attendance5, m.attendance6, m.attendance7, m.attendance8,
+          m.attendance9, m.attendance10, m.attendance11, m.attendance12,
+          m.attendance13, m.attendance14, m.attendance15, m.attendance16
+        ] : Array(16).fill(null),
+
+        // Sesuaikan pemanggilan properti objek menjadi task
+        assignments: m ? [
+          m.task1, m.task2, m.task3, m.task4, m.task5
+        ] : Array(5).fill(null)
       };
     });
 
@@ -458,29 +480,37 @@ export const getStudentByClassId = async (req, res) => {
 export const updatesStudyPlanCourse = async (req, res) => {
   try {
     const tokenCredential = req.user;
+    
+    // 1. Proteksi Hak Akses Dosen
     if (tokenCredential.role !== "lecture") {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized",
+        message: "Unauthorized. Hanya dosen yang dapat memperbarui absensi/tugas.",
       });
     }
-    const { id } = req.params;
-    const updateData = req.body;
+
+    const { id } = req.params; // Ini adalah studyPlanCourseId mahasiswa
+    const updateData = req.body; // Isi payload body dari Postman/Frontend
 
     if (!id) {
-      return errorResponse(res, "id course plan harus diisi", null, 400);
+      return errorResponse(res, "ID Study Plan Course harus diisi", null, 400);
     }
 
-    // do update
-    const update = await prisma.studyPlanCourse.update({
-      where: {
-        id,
-      },
-      data: updateData,
+    // 2. PENGAMAN: Pastikan objek body tidak kosong
+    if (Object.keys(updateData).length === 0) {
+      return errorResponse(res, "Tidak ada data yang dikirim untuk di-update", null, 400);
+    }
+
+    // 3. Eksekusi Update ke Database Prisma
+    const updatedRecord = await prisma.studyPlanCourse.update({
+      where: { id: id },
+      data: updateData, // Prisma otomatis mencocokkan key seperti attendance1, assignment1, dll.
     });
-    return successResponse(res, "berhasil mengupdate data", update, 200);
+
+    return successResponse(res, "Berhasil memperbarui data akademik mahasiswa", updatedRecord, 200);
   } catch (error) {
-    return errorResponse(res, "terjadi kesalahan", error.message, 500);
+    console.error("Error Update Academic Record: ", error.message);
+    return errorResponse(res, "Gagal memperbarui data", error.message, 500);
   }
 };
 
