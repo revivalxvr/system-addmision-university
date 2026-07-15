@@ -1,5 +1,6 @@
 import prisma from "../config/Prisma.js";
 import { successResponse, errorResponse } from "../utils/response.js";
+import { snap, core } from "../config/midtrans.js";
 
 //     getAllPayments,
 export const getAllPayments = async (req, res) => {
@@ -124,8 +125,8 @@ export const updatePayment = async (req, res) => {
     if (!existing) {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
-    const {  status } = req.body;
-    if ( !status) {
+    const { status } = req.body;
+    if (!status) {
       return errorResponse(res, "data harus diisi", null, 401);
     }
     const payment = await prisma.payment.update({
@@ -157,7 +158,7 @@ export const deletePayment = async (req, res) => {
         id,
       },
     });
-    if(!existId) {
+    if (!existId) {
       return errorResponse(res, "data tidak ditemukan di database", null, 404);
     }
     const payment = await prisma.payment.delete({
@@ -168,5 +169,92 @@ export const deletePayment = async (req, res) => {
     return successResponse(res, "berhasil menghapus data", payment);
   } catch (error) {
     return errorResponse(res, "Gagal terjadi kesalahan", error.message, 500);
+  }
+};
+
+export const createToken = async (req, res) => {
+  try {
+    const { id, name, email, studentNumber, major, amount } = req.body;
+    const midtransOrderId = `${id}_${Date.now()}`;
+    const parameter = {
+      transaction_details: {
+        order_id: midtransOrderId,
+        gross_amount: Number(amount),
+      },
+
+      customer_details: {
+        first_name: name,
+        email: email,
+      },
+      custom_field1: studentNumber,
+      custom_field2: major,
+    };
+    const token = await snap.createTransaction(parameter);
+    return res.json({
+      success: true,
+      // AMBIL PROPERTI .token NYA SAJA
+      token: token.token
+    });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+export const notification = async (req, res) => {
+  try {
+    const statusResponse = await core.transaction.notification(req.body);
+    const { order_id, transaction_status, fraud_status } = statusResponse;
+
+    const id = order_id.split("_")[0]; //id + waktu, kita potong '_' agar id nya hanya id saja tanpa 'waktu' sebelum cari di databse
+    const payment = await prisma.payment.findUnique({
+      where: {
+        id: id,
+      },
+    });
+    if (!payment) {
+      return errorResponse(res, "data tidak ditemukan di database", null, 404);
+    }
+
+    let paymentStatus = payment.status;
+    switch (transaction_status) {
+      case "capture":
+        if (fraud_status === "accept") {
+          paymentStatus = "PAID";
+        }
+        break;
+      case "settlement":
+        paymentStatus = "PAID";
+        break;
+      case "pending":
+        paymentStatus = "PENDING";
+        break;
+      case "deny":
+      case "expire":
+      case "cancel":
+        paymentStatus = "CANCELLED";
+        break;
+    }
+    await prisma.payment.update({
+      where: {
+        id: id,
+      },
+      data: {
+        status: paymentStatus,
+      },
+    });
+    return res.status(200).json({
+      success: true,
+      message: "Notification berhasil diproses",
+    });
+  } catch (err) {
+    console.error(err);
+
+    return res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
