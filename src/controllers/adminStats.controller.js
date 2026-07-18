@@ -62,7 +62,7 @@ export const adminStats = async (req, res) => {
     const facultyMap = new Map();
     faculties.forEach((fac) => {
       facultyMap.set(fac.id, {
-        faculdyId: fac.id,
+        facultyId: fac.id,
         facultyName: fac.name,
         studentCount: 0,
       });
@@ -70,11 +70,10 @@ export const adminStats = async (req, res) => {
 
     // update student per fakultas
     studentPerFaculty.forEach((student) => {
-      // Tambahkan ?. sebelum kata faculty untuk mencegah crash
-      const facId = student.class?.major?.major?.faculty;
+      const facObject = student.class?.major?.faculty;
 
-      if (facId) {
-        const fac = facultyMap.get(facId);
+      if (facObject && facObject.id) {
+        const fac = facultyMap.get(facObject.id);
         if (fac) {
           fac.studentCount += 1;
         }
@@ -107,6 +106,11 @@ export const adminStats = async (req, res) => {
             student: {
               select: {
                 name: true,
+                advisor :{
+                  select: {
+                    name: true,
+                  }
+                }
               },
             },
           },
@@ -114,9 +118,6 @@ export const adminStats = async (req, res) => {
         course: {
           select: {
             name: true,
-            lecture: {
-              select: { name: true },
-            },
           },
         },
       },
@@ -124,7 +125,7 @@ export const adminStats = async (req, res) => {
     const fromatedStudyPlans = studyPlans.map((sp) => ({
       courseName: sp.course?.name ?? null,
       studentName: sp.studyPlan?.student?.name ?? null,
-      lectureName: sp.course?.lecture?.name ?? null,
+      lectureName: sp.studyPlan?.student?.advisor?.name ?? null,
       status: sp.studyPlan?.status ?? null,
     }));
 
@@ -134,12 +135,13 @@ export const adminStats = async (req, res) => {
     let paidAmount = 0;
     let unpaidAmount = 0;
     payments.forEach((payment) => {
-      if (payment.status.toLowerCase() === "paid") {
+      const amount = payment.student?.tfGroup?.amount ?? 0;
+      if (payment.status === "PAID") {
         paidCount++;
-        paidAmount += payment.student?.tfGroup?.amount ?? 0;
-      } else if (payment.status.toLowerCase() === "unpaid") {
+        paidAmount += amount;
+      } else if (payment.status === "UNPAID") {
         unpaidCount++;
-        unpaidAmount += payment.student?.tfGroup?.amount ?? 0;
+        unpaidAmount += amount;
       }
     });
 
